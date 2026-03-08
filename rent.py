@@ -22,7 +22,7 @@ def get_shift_group(dt):
     diff = (dt - base_date).days
     return SHIFT_TYPES[(diff + 1) % 3]
 
-# CSS 스타일 적용 (image_7f4e49.png 구조 반영)
+# CSS 스타일 (타이틀 통합 및 미니 컬러 버튼 디자인)
 st.markdown("""
 <style>
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
@@ -30,22 +30,34 @@ st.markdown("""
     .main-title { font-size: 22px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
     .sub-label { font-size: 16px !important; font-weight: 800; color: #2E5077; margin-top: 15px !important; display: block; margin-bottom: 5px; }
     
-    /* 결과 헤더 박스 디자인 */
-    .result-header-box {
-        background-color: #F0F2F6; padding: 12px; border-radius: 12px;
-        border: 1px solid #D1D9E6; text-align: center; margin-bottom: 10px;
+    /* 통합 타이틀 박스 디자인 */
+    .combined-header {
+        background-color: #F8FAFC; padding: 15px; border-radius: 12px;
+        border: 1px solid #E2E8F0; text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    .title-text { font-size: 17px; font-weight: 800; color: #1E3A5F; margin-bottom: 8px; }
-    .nav-container { display: flex; align-items: center; justify-content: center; gap: 15px; }
-    .date-info-text { font-size: 16px; font-weight: 800; }
-    
+    .title-main { font-size: 17px; font-weight: 800; color: #1E3A5F; margin-bottom: 4px; }
+    .title-sub { font-size: 15px; font-weight: 700; }
+
+    /* 화살표 버튼 커스텀 스타일 */
+    div[data-testid="stButton"] > button {
+        border-radius: 8px !important;
+        padding: 4px 10px !important;
+        height: auto !important;
+        min-height: 35px !important;
+    }
+    /* 왼쪽 버튼 (청색 계열) */
+    button[key="arrow_prev"] { background-color: #E0F2FE !important; color: #0369A1 !important; border: 1px solid #BAE6FD !important; }
+    /* 오른쪽 버튼 (청색 계열) */
+    button[key="arrow_next"] { background-color: #E0F2FE !important; color: #0369A1 !important; border: 1px solid #BAE6FD !important; }
+
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 25px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
     .event-card { border: 1px solid #E0E0E0; border-left: 6px solid #2E5077; padding: 12px; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; }
     .time-highlight { color: #FF4B4B; font-weight: 800; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 상단 필터 영역 (image_9bde43.png)
+# 2. 상단 필터 영역 (검색 전까지 결과 미노출 로직 유지)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -75,7 +87,7 @@ def fetch_data(dt):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력 섹션 (타이틀 아래 화살표 배치)
+# 4. 결과 출력 섹션 (통합 타이틀 박스 + 미니 화살표)
 if st.session_state.triggered:
     st.write("---")
     
@@ -84,29 +96,28 @@ if st.session_state.triggered:
     t_color = "#0000FF" if w_idx == 5 else ("#FF0000" if w_idx == 6 else "#1E3A5F")
     shift = get_shift_group(curr)
 
-    # 타이틀 박스 (상단: 텍스트 / 하단: 버튼 3개 나란히)
-    st.markdown(f'<div class="result-header-box"><div class="title-text">📋 성의교정 대관 현황</div></div>', unsafe_allow_html=True)
+    # 화살표-타이틀 통합 레이아웃
+    nav_col1, nav_col2, nav_col3 = st.columns([0.5, 4, 0.5])
     
-    # 화살표와 날짜 정보를 한 줄에 배치
-    c_left, c_mid, c_right = st.columns([1, 4, 1])
-    
-    with c_left:
-        if st.button("◀", key="arrow_prev", use_container_width=True):
+    with nav_col1:
+        st.write("##") # 간격 조정
+        if st.button("◀", key="arrow_prev"):
             st.session_state.search_date -= timedelta(days=1)
             st.rerun()
 
-    with c_mid:
-        # 중앙 날짜 정보 표시
+    with nav_col2:
         st.markdown(f"""
-            <div style="background-color: #F0F2F6; padding: 7px; border-radius: 8px; border: 1px solid #D1D9E6; text-align: center;">
-                <span style="color:{t_color}; font-weight:800; font-size:16px;">
+            <div class="combined-header">
+                <div class="title-main">📋 성의교정 대관 현황</div>
+                <div class="title-sub" style="color:{t_color};">
                     [ {curr.strftime('%Y.%m.%d')}({WEEKDAY_KR[w_idx]}) | {shift} ]
-                </span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
-    with c_right:
-        if st.button("▶", key="arrow_next", use_container_width=True):
+    with nav_col3:
+        st.write("##") # 간격 조정
+        if st.button("▶", key="arrow_next"):
             st.session_state.search_date += timedelta(days=1)
             st.rerun()
 
@@ -120,11 +131,13 @@ if st.session_state.triggered:
             
             st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
             
+            # 당일 대관 출력
             t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
             if show_today and not t_ev.empty:
                 for _, row in t_ev.iterrows():
                     st.markdown(f"""<div class="event-card">📍 {row['placeNm']} <span class="time-highlight">⏰ {row['startTime']} ~ {row['endTime']}</span><br>📄 {row['eventNm']}</div>""", unsafe_allow_html=True)
             
+            # 기간 대관 출력 (요일 필터링 포함)
             p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
             if show_period and not p_ev.empty:
                 for _, row in p_ev.iterrows():
