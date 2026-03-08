@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 배경 박스 및 레이아웃 최적화
+# CSS: 배경 박스(필터 및 결과 타이틀) 및 레이아웃 최적화
 st.markdown("""
 <style>
     /* 전체 여백 및 폭 최적화 */
@@ -19,17 +19,17 @@ st.markdown("""
     /* 전체 폰트 크기 */
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 메인 타이틀 및 결과 헤더 스타일 */
+    /* 타이틀 공통 스타일 */
     .main-title { 
         font-size: 22px !important; 
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: 20px !important; 
-        padding-top: 5px;
+        margin-bottom: 0px !important; 
+        padding: 5px 0;
     }
     
-    /* 배경 박스 */
+    /* 배경 박스 (상단 필터 및 결과 타이틀용) */
     .filter-container {
         background-color: #f8f9fa;
         padding: 12px;
@@ -91,7 +91,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 상단 타이틀
+# 상단 메인 타이틀
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 # 2. 검색 필터 영역
@@ -150,12 +150,14 @@ if search_clicked:
     else:
         df = pd.DataFrame()
 
-    # [수정] 결과 헤더 위에 빈 라인 추가
+    # 결과 타이틀 위 빈 라인
     st.write("") 
     
-    # 결과 헤더 스타일
+    # 결과 타이틀 영역 (박스 적용)
+    st.markdown('<div class="filter-container">', unsafe_allow_html=True)
     formatted_date = target_date.strftime('%m/%d')
     st.markdown(f'<div class="main-title">🏢 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     for bu in selected_buildings:
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
