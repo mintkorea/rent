@@ -6,7 +6,113 @@ from datetime import datetime, date
 # 1. 페이지 설정 (원본 복구)
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (줄간격 최소화 + 자바스크립트 없는 자동 스크롤)import streamlit as st
+# CSS 스타일 (줄간격 최소화 + 자바스크립트 없는 자동 스크롤)import streamlit as stimport streamlit as st
+import requests
+import pandas as pd
+from datetime import datetime, date
+
+# 1. 페이지 설정 (최대한 컴팩트하게)
+st.set_page_config(page_title="대관 조회", layout="centered")
+
+# CSS 스타일 - 자바스크립트 0%, 줄간격 초밀착 작전
+st.markdown("""
+<style>
+    /* 전체 여백 삭제 */
+    .block-container { padding: 0.5rem !important; max-width: 400px !important; }
+    header { visibility: hidden; footer { visibility: hidden; }
+    
+    /* 줄간격 박멸 */
+    [data-testid="stVerticalBlock"] { gap: 0rem !important; }
+    .stCheckbox { margin-top: -10px !important; margin-bottom: -10px !important; }
+    
+    .main-title { font-size: 18px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
+    .sub-label { font-size: 13px !important; font-weight: bold; color: #2E5077; margin: 0 !important; }
+    
+    /* 결과 레이아웃 (표 형태처럼 촘촘하게) */
+    .res-box { 
+        background-color: #f8f9fa; border: 1px solid #ddd; 
+        padding: 3px 6px; border-radius: 4px; margin-bottom: 2px !important;
+        line-height: 1.1 !important;
+    }
+    .res-date { text-align: center; font-weight: 800; background: #eee; padding: 3px; font-size: 14px; margin-bottom: 5px; }
+    
+    /* 요일 색상 */
+    .sat { color: blue !important; }
+    .sun { color: red !important; }
+    
+    .bu-header { font-size: 14px; font-weight: 800; color: #fff; background: #2E5077; padding: 2px 5px; margin-top: 5px; }
+    .time { color: #FF4B4B; font-weight: bold; font-size: 12px; }
+    .place { font-weight: bold; font-size: 12px; color: #1E3A5F; }
+    .event { font-size: 12px; color: #333; }
+    .dept { font-size: 10px; color: #777; text-align: right; }
+</style>
+""", unsafe_allow_html=True)
+
+# 2. UI 구성
+st.markdown('<div class="main-title">🏫 성의교정 대관현황</div>', unsafe_allow_html=True)
+
+# 폼으로 묶어서 한 번에 전송 (에러 방지)
+with st.form("my_form"):
+    st.markdown('<p class="sub-label">📅 날짜</p>', unsafe_allow_html=True)
+    target_date = st.date_input("D", value=date(2026, 3, 12), label_visibility="collapsed")
+    
+    st.markdown('<p class="sub-label">🏢 건물</p>', unsafe_allow_html=True)
+    ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+    # 건물 선택도 촘촘하게
+    sel_bu = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"b_{b}")]
+    
+    st.markdown('<p class="sub-label">🗓️ 유형</p>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1: s_today = st.checkbox("당일", value=True)
+    with c2: s_period = st.checkbox("기간", value=True)
+    
+    do_search = st.form_submit_button("🔍 조회", use_container_width=True)
+
+# 3. 데이터 및 출력
+if do_search:
+    try:
+        url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
+        params = {"mode": "getReservedData", "start": target_date.strftime('%Y-%m-%d'), "end": target_date.strftime('%Y-%m-%d')}
+        res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
+        df = pd.DataFrame(res.json().get('res', []))
+        
+        # 요일 설정
+        w_idx = target_date.weekday()
+        w_str = ["월","화","수","목","금","토","일"][w_idx]
+        w_cls = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
+        
+        st.markdown(f'<div class="res-date">{target_date.strftime("%Y.%m.%d")} <span class="{w_cls}">({w_str})</span></div>', unsafe_allow_html=True)
+        
+        if not df.empty:
+            target_w = str(w_idx + 1)
+            for bu in sel_bu:
+                bu_df = df[df['buNm'].str.contains(bu, na=False)]
+                if bu_df.empty: continue
+                
+                st.markdown(f'<div class="bu-header">🏢 {bu}</div>', unsafe_allow_html=True)
+                for _, row in bu_df.iterrows():
+                    is_t = (row['startDt'] == row['endDt'])
+                    is_p = (row['startDt'] != row['endDt'])
+                    
+                    show = False
+                    if is_t and s_today: show = True
+                    elif is_p and s_period:
+                        if target_w in [d.strip() for d in str(row.get('allowDay','')).split(",")]:
+                            show = True
+                    
+                    if show:
+                        st.markdown(f"""
+                        <div class="res-box">
+                            <span class="time">⏰ {row['startTime']}~{row['endTime']}</span>
+                            <span class="place"> | {row['placeNm']}</span>
+                            <div class="event">📄 {row['eventNm']}</div>
+                            <div class="dept">👥 {row['mgDeptNm']}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+        else:
+            st.write("내역 없음")
+    except:
+        st.error("데이터 로딩 실패")
 import requestsimport streamlit as st
 import requests
 import pandas as pd
@@ -567,6 +673,7 @@ if search_clicked:
         st.markdown('<div class="top-link-container"><a href="#top-anchor" class="top-link">TOP</a></div>', unsafe_allow_html=True)
     else:
         st.info("조회된 내역이 없습니다.")
+
 
 
 
