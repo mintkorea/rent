@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 박스 내부 간격 및 레이아웃 최종 교정
+# CSS: 박스 스타일 및 레이아웃 최적화
 st.markdown("""
 <style>
     .block-container { 
@@ -16,7 +16,7 @@ st.markdown("""
     #MainMenu, header { visibility: hidden; }
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 타이틀 스타일 */
+    /* 타이틀 공통 스타일 */
     .main-title { 
         font-size: 22px !important; 
         font-weight: 800; 
@@ -26,7 +26,7 @@ st.markdown("""
         padding: 5px 0;
     }
     
-    /* 배경 박스 (필터 및 결과 타이틀용) */
+    /* 배경 박스 (필터 박스 및 결과 타이틀 박스 공통) */
     .filter-container {
         background-color: #f8f9fa;
         padding: 12px;
@@ -49,15 +49,19 @@ st.markdown("""
     .stCheckbox { margin-top: -6px !important; margin-bottom: -6px !important; }
     .stCheckbox label p { font-size: 16px !important; font-weight: 500; }
 
-    /* 대관 유형 가로 배치 */
+    /* 대관 유형 가로 배치 강제 (Flexbox) */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 10px !important;
     }
+    div[data-testid="stHorizontalBlock"] > div {
+        width: auto !important;
+        min-width: auto !important;
+    }
 
-    /* 결과 카드 디자인 */
+    /* 결과 개별 건물 헤더 및 카드 */
     .building-header { 
         font-size: 19px !important; 
         font-weight: bold; 
@@ -77,11 +81,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 메인 타이틀
+# 상단 메인 타이틀
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
-st.write("") # 타이틀 아래 여백
+st.write("") 
 
-# 2. 검색 필터 영역
+# 2. 검색 필터 영역 (배경 박스 적용)
 with st.container():
     st.markdown('<div class="filter-container">', unsafe_allow_html=True)
     st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -125,15 +129,18 @@ if search_clicked:
         temp_df['endDt_dt'] = pd.to_datetime(temp_df['endDt']).dt.date
         df = temp_df[(temp_df['startDt_dt'] <= target_date) & (temp_df['endDt_dt'] >= target_date)]
 
-    # [수정] 결과 타이틀을 하나의 박스 태그 안에 통째로 넣음
+    # 결과 영역 사이 빈 라인
     st.write("") 
+    
+    # [핵심 수정] 결과 타이틀을 필터와 동일한 filter-container 박스 안에 배치
     formatted_date = target_date.strftime('%m/%d')
     st.markdown(f"""
-    <div class="filter-container">
+    <div class="filter-container" style="margin-bottom: 20px;">
         <div class="main-title">🏢 성의교정 대관 현황({formatted_date})</div>
     </div>
     """, unsafe_allow_html=True)
 
+    # 개별 건물 결과 출력
     for bu in selected_buildings:
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
         bu_df = df[df['buNm'].str.contains(bu, na=False)].copy() if not df.empty else pd.DataFrame()
