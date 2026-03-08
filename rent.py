@@ -6,10 +6,10 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 여백 및 간격 정밀 조정
+# CSS: 간격 정밀 조정 (구분선 및 체크박스)
 st.markdown("""
 <style>
-    /* 상단 여백 및 배경 틀어짐 방지 */
+    /* 상단 여백 최소화 */
     .block-container { 
         padding-top: 0.5rem !important; 
         padding-bottom: 0rem !important; 
@@ -18,7 +18,7 @@ st.markdown("""
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* 폰트 크기 설정 */
+    /* 전체 폰트 크기 */
     html, body, [class*="st-"] { font-size: 17px !important; }
 
     /* 제목 및 달력 간격 최소화 */
@@ -27,27 +27,30 @@ st.markdown("""
         font-weight: bold; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: -10px !important; /* 아래 달력과의 간격 축소 */
+        margin-bottom: -15px !important; 
     }
     
-    /* 필터 컨테이너 (배경 박스 제거 및 패딩 축소) */
-    .filter-container { 
-        padding: 5px 0px;
-        margin-bottom: 10px; 
-    }
+    /* 필터 영역 설정 */
+    .filter-container { padding: 5px 0px; }
     
-    /* 체크박스 건물명 사이 간격 극소화 */
+    /* 건물 체크박스 간격 (미세하게 조정) */
     .stCheckbox { 
-        margin-top: -12px !important; 
-        margin-bottom: -12px !important; 
+        margin-top: -8px !important; 
+        margin-bottom: -8px !important; 
     }
     .stCheckbox label p { 
         font-size: 18px !important; 
         font-weight: 500;
-        line-height: 1.2 !important;
+        line-height: 1.3 !important;
+    }
+
+    /* 구분선(Line) 간격 줄이기 */
+    hr {
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
     }
     
-    /* 검색 결과 디자인 */
+    /* 검색 결과 카드 디자인 */
     .building-header { 
         font-size: 20px !important; 
         font-weight: bold; 
@@ -77,7 +80,7 @@ with st.container():
     # (1) 날짜 선택
     target_date = st.date_input("📅 날짜 선택", value=date(2026, 3, 12))
     
-    st.markdown("🏢 **건물 선택**", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:5px;'><b>🏢 건물 선택</b></div>", unsafe_allow_html=True)
     ALL_BUILDINGS = [
         "성의회관", "의생명산업연구원", "옴니버스 파크", 
         "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", 
@@ -85,22 +88,23 @@ with st.container():
     ]
     DEFAULT_BUILDINGS = ["성의회관", "의생명산업연구원"]
     
-    # (2) 건물명 체크박스 (간격 축소 적용)
+    # (2) 건물명 체크박스
     selected_buildings = []
     for bu in ALL_BUILDINGS:
         is_default = bu in DEFAULT_BUILDINGS
         if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
-    st.write("---")
+    # (3) 구분선 및 대관 유형 (간격 축소)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<b>🗓️ 대관 유형</b>", unsafe_allow_html=True)
     
-    # (3) 대관 유형
-    st.write("🗓️ **대관 유형**")
     t_col1, t_col2 = st.columns(2)
     show_today = t_col1.checkbox("📌 당일 대관", value=True)
     show_period = t_col2.checkbox("🗓️ 기간 대관", value=False)
     
     # (4) 검색 버튼
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
