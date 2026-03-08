@@ -6,10 +6,10 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 전체 간격 압축 및 모바일 한 줄 배치 최적화
+# CSS: 정밀 간격 조정 및 대관 유형 한 줄 강제 배치
 st.markdown("""
 <style>
-    /* 상단 및 전체 여백 극소화 */
+    /* 상단 및 전체 여백 최적화 */
     .block-container { 
         padding-top: 0.5rem !important; 
         padding-bottom: 0rem !important; 
@@ -18,40 +18,42 @@ st.markdown("""
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* 메인 타이틀: 아래 간격 대폭 축소 */
+    /* 메인 타이틀 */
     .main-title { 
-        font-size: 24px !important; 
+        font-size: 22px !important; 
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: 5px !important; 
+        margin-bottom: 0px !important; 
     }
     
-    /* 부제목 스타일 */
+    /* 부제목: 제목 아래 여백 최소화 */
     .sub-header {
         font-size: 19px !important;
         font-weight: 800 !important;
         color: #2E5077;
-        margin-top: 8px !important;
-        margin-bottom: 2px !important;
+        margin-top: 10px !important;
+        margin-bottom: -5px !important; /* 아래 요소와 바짝 붙게 설정 */
         display: block;
     }
 
-    /* 체크박스 텍스트 및 간격 극소화 */
-    .stCheckbox label p { 
-        font-size: 17px !important; 
-        font-weight: 500;
-        line-height: 1.1 !important;
-    }
+    /* 건물명 체크박스: 터치 편의성을 위해 여백 약간 복구 */
     .stCheckbox { 
-        margin-top: -12px !important; 
-        margin-bottom: -12px !important; 
+        margin-top: -4px !important; 
+        margin-bottom: -4px !important; 
+    }
+    .stCheckbox label p { 
+        font-size: 18px !important; 
+        font-weight: 500;
+        line-height: 1.4 !important;
     }
 
-    /* 대관 유형 열 간격 조정 (한 줄 유지용) */
-    [data-testid="column"] {
-        padding: 0 !important;
-        min-width: 100px !important;
+    /* 대관 유형 한 줄 강제 정렬 (Flexbox 사용) */
+    .flex-row {
+        display: flex;
+        gap: 15px; /* 당일대관과 기간대관 사이 간격 */
+        align-items: center;
+        margin-top: 2px;
     }
 
     /* 결과 카드 디자인 */
@@ -98,19 +100,18 @@ with st.container():
         if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
-    # (3) 대관 유형 (라인 제거 및 여백 축소)
-    st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+    # (3) 대관 유형: 한 줄로 강제 배치
     st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
     
-    # 간격을 좁힌 2개 컬럼으로 배치
-    t_col1, t_col2 = st.columns(2)
-    with t_col1:
+    # Streamlit 기본 컬럼 대신 좁은 공간 활용을 위한 수동 배치 형태
+    type_cols = st.columns([1, 1, 1]) # 여유 공간 확보를 위해 컬럼 쪼개기
+    with type_cols[0]:
         show_today = st.checkbox("당일 대관", value=True)
-    with t_col2:
+    with type_cols[1]:
         show_period = st.checkbox("기간 대관", value=False)
     
     # (4) 검색 버튼
-    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 수집 함수
