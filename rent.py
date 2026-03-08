@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
 
-# 1. 페이지 설정 및 세션 초기화 (건드리지 않음)
+# 1. 페이지 설정 및 세션 초기화
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 if 'search_date' not in st.session_state:
@@ -19,7 +19,7 @@ def get_shift_group(dt):
     diff = (dt - base_date).days
     return SHIFT_TYPES[(diff + 1) % 3]
 
-# 2. CSS 스타일 (성공했던 3개 셀 밀착 디자인 유지)
+# 2. CSS 스타일 (성공했던 3개 셀 밀착 디자인 절대 유지)
 st.markdown("""
 <style>
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
@@ -61,7 +61,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 입력 필터 영역 (상시 노출)
+# 3. 입력 필터 영역
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -92,7 +92,7 @@ if st.button("🔍 검색하기", use_container_width=True):
     st.session_state.search_date = p_date
     st.session_state.triggered = True
 
-# 4. 데이터 로드 함수 (건드리지 않음)
+# 4. 데이터 로드 함수
 @st.cache_data(ttl=300)
 def fetch_data(dt):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -144,7 +144,7 @@ if st.session_state.triggered:
                 is_today = (row['startDt'] == row['endDt'])
                 allow_days = [d.strip() for d in str(row.get('allowDay', '')).split(",")]
                 
-                # [추가된 부분] 예약 상태 추출
+                # 예약 상태 추출
                 status = row.get('statusNm', '')
                 
                 if (is_today and show_today) or (not is_today and show_period and target_wd in allow_days):
