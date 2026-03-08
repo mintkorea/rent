@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 타이틀-달력 밀착 및 버튼 하단 여백 설정
+# CSS: 디자인 디테일 조정
 st.markdown("""
 <style>
     .block-container { 
@@ -26,15 +26,17 @@ st.markdown("""
         margin-bottom: 5px !important; 
     }
 
-    /* [수정] 검색 버튼 아래에 한 줄 여백(margin-bottom) 부여 */
+    /* 검색 버튼 아래 한 줄 여백 (구분선 대신 공간으로 분리) */
     div.stButton {
-        margin-bottom: 40px !important;
+        margin-bottom: 35px !important;
     }
 
+    /* [수정] 결과 타이틀 박스 스타일 */
     .date-display { 
-        text-align: center; font-size: 18px; font-weight: bold; 
-        background-color: #F0F2F6; padding: 10px; border-radius: 10px; 
-        margin-bottom: 15px; 
+        text-align: center; font-size: 19px; font-weight: 800; 
+        background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
+        margin-bottom: 20px; 
+        color: #1E3A5F;
     }
 
     .sub-label {
@@ -78,7 +80,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 메인 UI (필터 영역)
+# 2. 메인 UI
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -88,12 +90,12 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
 for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v46_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v47_{b}"):
         selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_46")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_46")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_47")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_47")
 
 st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
@@ -108,13 +110,14 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력 (검색 시 하단에 별도 섹션처럼 출력)
+# 4. 결과 출력
 if search_clicked:
-    # 검색 버튼 하단에 시각적 구분선 추가
-    st.divider() 
+    # 라인(st.divider) 제거
     
     df_raw = get_data(target_date)
-    st.markdown(f'<div class="date-display">📅 {target_date.strftime("%Y년 %m월 %d일")} 조회 결과</div>', unsafe_allow_html=True)
+    # [수정] 요청하신 문구 형식으로 변경: 성의교정 대관 현황(YYYY.MM.DD)
+    formatted_date = target_date.strftime("%Y.%m.%d")
+    st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
 
     if not df_raw.empty:
         temp_df = df_raw.copy()
@@ -127,7 +130,7 @@ if search_clicked:
             bu_df = df[df['buNm'].str.contains(bu, na=False)].copy()
 
             if bu_df.empty:
-                st.markdown('<div style="color:#888; font-style:italic; padding:10px;">ℹ️ 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+                st.markdown('<div style="color:#888; font-style:italic; padding:10px;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
             else:
                 bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
                 bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
