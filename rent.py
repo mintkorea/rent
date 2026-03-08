@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 카드 간격 확대 및 상단 공백 축소
+# CSS: 타이틀-달력 밀착 및 버튼 하단 여백 설정
 st.markdown("""
 <style>
     .block-container { 
@@ -15,16 +15,20 @@ st.markdown("""
     }
     #MainMenu, header { visibility: hidden; }
     
-    /* 위젯 간 기본 간격 */
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 
-    /* [수정] 메인 타이틀 아래 공백을 줄여 달력과 밀착 */
+    /* 타이틀과 달력 사이 간격 최소화 */
     .main-title {
         font-size: 24px !important;
         font-weight: 800;
         text-align: center;
         color: #1E3A5F;
-        margin-bottom: 10px !important; 
+        margin-bottom: 5px !important; 
+    }
+
+    /* [수정] 검색 버튼 아래에 한 줄 여백(margin-bottom) 부여 */
+    div.stButton {
+        margin-bottom: 40px !important;
     }
 
     .date-display { 
@@ -43,24 +47,23 @@ st.markdown("""
 
     .building-header { 
         font-size: 19px !important; font-weight: bold; color: #2E5077; 
-        margin-top: 20px; border-bottom: 2px solid #2E5077; 
-        padding-bottom: 5px; margin-bottom: 15px; 
+        margin-top: 15px; border-bottom: 2px solid #2E5077; 
+        padding-bottom: 5px; margin-bottom: 12px; 
     }
 
     .section-title { 
         font-size: 16px; font-weight: bold; color: #555; 
-        margin: 15px 0 10px 0; padding-left: 5px; border-left: 4px solid #ccc; 
+        margin: 15px 0 8px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
-    /* [수정] 카드 간격 확대: 6px -> 12px로 조정하여 가독성 확보 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
         padding: 15px; border-radius: 5px; 
         margin-bottom: 12px !important; 
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05); 
+        background-color: #ffffff;
     }
     .today-card { background-color: #F8FAFF; } 
-    .period-card { background-color: #FFFFFF; }
     
     .place-time { font-size: 16px; font-weight: bold; color: #1E3A5F; }
     .time-highlight { color: #FF4B4B; margin-left: 8px; }
@@ -75,7 +78,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 메인 UI
+# 2. 메인 UI (필터 영역)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -85,17 +88,17 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
 for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v45_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v46_{b}"):
         selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_45")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_45")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_46")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_46")
 
 st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
-# 3. 데이터 로직 (생략)
+# 3. 데이터 로직
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -105,10 +108,13 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력
+# 4. 결과 출력 (검색 시 하단에 별도 섹션처럼 출력)
 if search_clicked:
+    # 검색 버튼 하단에 시각적 구분선 추가
+    st.divider() 
+    
     df_raw = get_data(target_date)
-    st.markdown(f'<div class="date-display">📅 {target_date.strftime("%Y년 %m월 %d일")}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="date-display">📅 {target_date.strftime("%Y년 %m월 %d일")} 조회 결과</div>', unsafe_allow_html=True)
 
     if not df_raw.empty:
         temp_df = df_raw.copy()
@@ -121,21 +127,18 @@ if search_clicked:
             bu_df = df[df['buNm'].str.contains(bu, na=False)].copy()
 
             if bu_df.empty:
-                st.markdown('<div style="color:#888; font-style:italic; padding:10px;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
+                st.markdown('<div style="color:#888; font-style:italic; padding:10px;">ℹ️ 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
             else:
-                # 정렬 및 분류
                 bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
                 bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
                 
                 today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
                 period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
                 
-                # 1. 당일 대관 노출
                 if show_today and not today_ev.empty:
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                     for _, row in today_ev.iterrows():
-                        s_cls = "status-y" if row['status'] == 'Y' else "status-n"
-                        s_txt = "예약확정" if row['status'] == 'Y' else "신청대기"
+                        s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""
                         <div class="event-card today-card">
                             <span class="status-badge {s_cls}">{s_txt}</span>
@@ -145,14 +148,12 @@ if search_clicked:
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # 2. 기간 대관 노출
                 if show_period and not period_ev.empty:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, row in period_ev.iterrows():
-                        s_cls = "status-y" if row['status'] == 'Y' else "status-n"
-                        s_txt = "예약확정" if row['status'] == 'Y' else "신청대기"
+                        s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""
-                        <div class="event-card period-card">
+                        <div class="event-card">
                             <span class="status-badge {s_cls}">{s_txt}</span>
                             <div class="place-time">📍 {row['placeNm']} <span class="time-highlight">⏰ {row['startTime']} ~ {row['endTime']}</span></div>
                             <div class="event-name">📄 {row['eventNm']}</div>
