@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (요일 색상 및 근무조 배지 스타일 추가)
+# CSS 스타일 (배지 글자색 흰색 추가 및 타이틀 가독성 보완)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -40,27 +40,28 @@ st.markdown("""
         border-radius: 12px; 
         margin-bottom: 20px; 
         border: 1px solid #D1D9E6;
-        line-height: 1.5;
+        line-height: 1.6;
     }
-    .res-main-title { font-size: 20px; font-weight: 800; color: #1E3A5F; display: block; }
+    .res-main-title { font-size: 20px; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 3px; }
     .res-sub-title { font-size: 17px; font-weight: 700; color: #333; }
     
     /* 요일 색상 */
     .sat { color: #0000FF !important; } /* 토요일 청색 */
     .sun { color: #FF0000 !important; } /* 일요일/공휴일 적색 */
 
-    /* 근무조 배지 */
+    /* 근무조 배지: 배경색과 흰색 글자 대비 */
     .group-badge {
         display: inline-block;
-        padding: 2px 10px;
-        border-radius: 5px;
+        padding: 2px 12px;
+        border-radius: 6px;
         font-weight: 800;
-        color: white;
+        color: #FFFFFF !important; /* 모든 배지 글자색 흰색 고정 */
         margin-left: 3px;
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.2);
     }
-    .group-A { background-color: #FFD700; color: #000; } /* 황색 */
-    .group-B { background-color: #FF0000; }             /* 적색 */
-    .group-C { background-color: #000080; }             /* 네이비 */
+    .group-A { background-color: #FFD700; color: #000000 !important; } /* A조만 검정색 글자 (황색 배경 대비) */
+    .group-B { background-color: #FF0000; }                             /* B조 적색 */
+    .group-C { background-color: #000080; }                             /* C조 네이비 */
 
     .sub-label {
         font-size: 18px !important;
@@ -178,17 +179,22 @@ if search_clicked:
     w_str = weekday_dict[w_idx]
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     
-    group_info = df_raw.iloc[0].get('groupNm', '-') if not df_raw.empty and 'groupNm' in df_raw.columns else "-"
-    group_class = f"group-{group_info[0].upper()}" if group_info != "-" else "group-C"
+    # 조 표시 정밀 제어 (A, B, C 추출)
+    raw_group = df_raw.iloc[0].get('groupNm', '-') if not df_raw.empty and 'groupNm' in df_raw.columns else "-"
+    group_text = raw_group if "조" in raw_group else (f"{raw_group}조" if raw_group != "-" else "-")
+    
+    # 클래스 선택 (A, B, C 중 첫글자 기준)
+    g_letter = raw_group[0].upper() if raw_group != "-" else "C"
+    group_class = f"group-{g_letter}" if g_letter in ["A", "B", "C"] else "group-C"
     
     formatted_date = target_date.strftime("%Y.%m.%d")
     
-    # 요청하신 타이틀 디자인 출력
+    # 결과 타이틀 출력
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
         <span class="res-sub-title">
-            {formatted_date}.<span class="{w_class}">({w_str})</span> | 근무 : <span class="group-badge {group_class}">{group_info}</span>
+            {formatted_date}.<span class="{w_class}">({w_str})</span> | 근무 : <span class="group-badge {group_class}">{group_text}</span>
         </span>
     </div>
     """, unsafe_allow_html=True)
