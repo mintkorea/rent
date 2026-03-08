@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (요일 색상 및 근무조 배지 스타일 추가)
+# CSS 스타일 (원본 유지)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -48,19 +48,6 @@ st.markdown("""
     /* 요일 색상 */
     .sat { color: #0000FF !important; } /* 토요일 청색 */
     .sun { color: #FF0000 !important; } /* 일요일/공휴일 적색 */
-
-    /* 근무조 배지 */
-    .group-badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 5px;
-        font-weight: 800;
-        color: white;
-        margin-left: 3px;
-    }
-    .group-A { background-color: #FFD700; color: #000; } /* 황색 */
-    .group-B { background-color: #FF0000; }             /* 적색 */
-    .group-C { background-color: #000080; }             /* 네이비 */
 
     .sub-label {
         font-size: 18px !important;
@@ -178,17 +165,14 @@ if search_clicked:
     w_str = weekday_dict[w_idx]
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     
-    group_info = df_raw.iloc[0].get('groupNm', '-') if not df_raw.empty and 'groupNm' in df_raw.columns else "-"
-    group_class = f"group-{group_info[0].upper()}" if group_info != "-" else "group-C"
-    
     formatted_date = target_date.strftime("%Y.%m.%d")
     
-    # 요청하신 타이틀 디자인 출력
+    # 근무조(groupNm) 부분만 제거한 타이틀
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
         <span class="res-sub-title">
-            {formatted_date}.<span class="{w_class}">({w_str})</span> | 근무 : <span class="group-badge {group_class}">{group_info}</span>
+            {formatted_date}.<span class="{w_class}">({w_str})</span>
         </span>
     </div>
     """, unsafe_allow_html=True)
