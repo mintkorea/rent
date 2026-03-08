@@ -6,74 +6,68 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 줄간격(Margin/Padding)을 0으로 강제 고정
+# CSS: 겹침 현상(Overlap) 해결 및 극강의 줄간격 축소
 st.markdown("""
 <style>
-    /* 전체 레이아웃: 좌측 여백만 확보하고 위아래는 밀착 */
+    /* 전체 여백 초기화 및 왼쪽 마진 확보 */
     .block-container { 
-        padding: 0.2rem 1.2rem !important; 
+        padding: 0.5rem 1.2rem !important; 
         max-width: 500px !important; 
     }
     #MainMenu, header { visibility: hidden; }
     
-    /* 메인 타이틀: 간격 최소화 */
+    /* 타이틀 및 라벨: 겹치지 않으면서 가장 촘촘하게 */
     .main-title {
         font-size: 20px !important;
         font-weight: 800;
         text-align: center;
         color: #1E3A5F;
-        margin: 0 !important; /* 간격 제거 */
-        padding: 5px 0 !important;
+        margin: 0 0 10px 0 !important;
     }
 
-    /* 소제목: 아래 위젯과 완전히 붙임 */
     .sub-label {
         font-size: 15px !important;
         font-weight: 800;
         color: #2E5077;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1 !important;
+        margin-bottom: -5px !important; /* 음수 마진 최소화하여 겹침 방지 */
+        display: block;
     }
 
-    /* Streamlit 기본 위젯 간격 강제 파괴 (0px) */
-    [data-testid="stVerticalBlock"] > div { margin-bottom: -22px !important; }
-    .stCheckbox { margin-bottom: -20px !important; }
-    .stCheckbox label p { font-size: 15px !important; margin: 0 !important; }
+    /* [해결] 체크박스 간격 밀착 (겹침 방지 임계값 적용) */
+    [data-testid="stVerticalBlock"] > div { margin-bottom: -12px !important; }
+    .stCheckbox { margin-bottom: -10px !important; }
+    .stCheckbox label p { font-size: 15px !important; line-height: 1.2 !important; }
 
-    /* 결과 타이틀 박스: 상하 여백 제거 */
-    .result-title-box {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 5px !important;
-        text-align: center;
-        margin: 5px 0 2px 0 !important;
-    }
-
-    /* [핵심] 건물명 헤더: 위아래 간격 0 */
+    /* [해결] 건물명 사이 간격: 휑하지 않게 상단 여백 제거 */
     .building-header { 
         font-size: 17px !important; 
         font-weight: bold; 
         color: #2E5077; 
-        margin: 0 !important; /* 위아래 여백 완전 제거 */
-        padding: 2px 0 !important;
+        margin: 5px 0 2px 0 !important; 
         border-bottom: 2px solid #2E5077; 
+        padding-bottom: 1px;
     }
 
-    /* 결과 카드: 카드 사이 간격 최소화 */
+    /* 결과 카드: 이미지 레이아웃 유지 및 내부 줄간격 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; 
         border-left: 5px solid #2E5077; 
-        padding: 4px 8px !important; 
-        border-radius: 4px; 
-        margin-bottom: 1px !important; /* 카드끼리 거의 붙임 */
+        padding: 4px 10px; 
+        border-radius: 6px; 
+        margin-bottom: 2px !important; 
         background-color: #ffffff;
-        line-height: 1.2 !important;
+        line-height: 1.3 !important;
     }
 
-    /* 버튼 간격 조정 */
-    .stButton button { margin-top: 15px !important; }
+    /* 결과 타이틀 박스 (성공했던 이미지 스타일 고정) */
+    .result-title-box {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 8px !important;
+        text-align: center;
+        margin: 10px 0 5px 0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,7 +81,7 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_B = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_buildings = []
 for b in ALL_B:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v8_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v9_{b}"):
         selected_buildings.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형</span>', unsafe_allow_html=True)
@@ -95,6 +89,7 @@ c1, c2 = st.columns(2)
 with c1: show_today = st.checkbox("당일 대관", value=True)
 with c2: show_period = st.checkbox("기간 대관", value=True)
 
+st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 로직
@@ -117,23 +112,22 @@ if search_clicked:
         t['e_dt'] = pd.to_datetime(t['endDt']).dt.date
         df = t[(t['s_dt'] <= target_date) & (t['e_dt'] >= target_date)]
 
-    # 성공했던 결과 타이틀 레이아웃
-    f_date = target_date.strftime('%m/%d')
+    # 성공했던 타이틀 박스 디자인 유지
     st.markdown(f"""
     <div class="result-title-box">
         <span style="font-size: 17px; font-weight: 800; color: #1E3A5F;">
-            🏢 성의교정 대관 현황({f_date})
+            🏥 성의교정 대관 현황({target_date.strftime("%m/%d")})
         </span>
     </div>
     """, unsafe_allow_html=True)
 
     for bu in selected_buildings:
-        # 건물명 헤더: margin 0 적용
+        # 건물 간 간격을 좁게 밀착
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
         bu_df = df[df['buNm'].str.contains(bu, na=False)].copy() if not df.empty else pd.DataFrame()
         
         if bu_df.empty:
-            st.markdown('<div style="color:#888; font-size:12px; padding:0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#888; font-size:13px; padding:1px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
         else:
             bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
             bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
@@ -146,6 +140,6 @@ if search_clicked:
                 <div class="event-card">
                     <b>📍 {row["placeNm"]}</b> ({s_txt})<br>
                     <span style="color:#FF4B4B;">⏰ {row["startTime"]}~{row["endTime"]}</span>{p_info}<br>
-                    <span style="font-size:13px;">📄 {row["eventNm"]}</span>
+                    <span style="font-size:13.5px;">📄 {row["eventNm"]}</span>
                 </div>
                 """, unsafe_allow_html=True)
