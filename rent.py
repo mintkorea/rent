@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 각 요소별 간격 정밀 조정
+# CSS: 부제목 폰트 강화 및 대관 유형 한 줄 배치
 st.markdown("""
 <style>
     /* 상단 여백 및 전체 폭 최적화 */
@@ -18,43 +18,55 @@ st.markdown("""
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* 전체 폰트 설정 */
-    html, body, [class*="st-"] { font-size: 17px !important; }
+    /* 전체 기본 폰트 */
+    html, body, [class*="st-"] { font-size: 16px !important; }
 
-    /* 제목 설정: 아래 요소와의 간격을 달력~건물 사이 간격과 유사하게 조정 */
+    /* 메인 타이틀 */
     .main-title { 
-        font-size: 24px !important; 
-        font-weight: bold; 
+        font-size: 26px !important; 
+        font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: 15px !important; 
+        margin-bottom: 20px !important; 
     }
     
-    /* 건물 체크박스 간격 */
-    .stCheckbox { 
-        margin-top: -8px !important; 
-        margin-bottom: -8px !important; 
+    /* 부제목 스타일 (건물명보다 크고 진하게 조정) */
+    .sub-header {
+        font-size: 20px !important;
+        font-weight: 800 !important;
+        color: #2E5077;
+        margin-top: 15px !important;
+        margin-bottom: 5px !important;
+        display: block;
     }
+
+    /* 건물명 체크박스 텍스트 */
     .stCheckbox label p { 
         font-size: 18px !important; 
         font-weight: 500;
-        line-height: 1.3 !important;
-    }
-
-    /* 구분선 및 섹션 간격 */
-    hr {
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
+        line-height: 1.2 !important;
     }
     
-    /* 검색 결과 디자인 */
+    /* 체크박스 자체 간격 축소 */
+    .stCheckbox { 
+        margin-top: -10px !important; 
+        margin-bottom: -10px !important; 
+    }
+
+    /* 구분선 */
+    hr {
+        margin-top: 15px !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* 결과 카드 디자인 */
     .building-header { 
-        font-size: 20px !important; 
+        font-size: 22px !important; 
         font-weight: bold; 
         color: #2E5077; 
-        margin-top: 15px; 
+        margin-top: 20px; 
         border-bottom: 2px solid #2E5077; 
-        padding-bottom: 3px; 
+        padding-bottom: 5px; 
     }
     .event-card { 
         border: 1px solid #E0E0E0; 
@@ -73,9 +85,11 @@ st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div
 # 2. 검색 필터 영역
 with st.container():
     # (1) 날짜 선택
-    target_date = st.date_input("📅 날짜 선택", value=date(2026, 3, 12))
+    st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
+    target_date = st.date_input("날짜 선택", value=date(2026, 3, 12), label_visibility="collapsed")
     
-    st.markdown("<div style='margin-top:10px;'><b>🏢 건물 선택</b></div>", unsafe_allow_html=True)
+    # (2) 건물 선택
+    st.markdown('<span class="sub-header">🏢 건물 선택</span>', unsafe_allow_html=True)
     ALL_BUILDINGS = [
         "성의회관", "의생명산업연구원", "옴니버스 파크", 
         "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", 
@@ -83,24 +97,25 @@ with st.container():
     ]
     DEFAULT_BUILDINGS = ["성의회관", "의생명산업연구원"]
     
-    # (2) 건물명 체크박스
     selected_buildings = []
     for bu in ALL_BUILDINGS:
         is_default = bu in DEFAULT_BUILDINGS
         if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
-    # (3) 구분선 및 대관 유형 (한 줄 배치)
+    # (3) 대관 유형 (한 줄 배치를 위해 간격 최적화)
     st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<b>🗓️ 대관 유형</b>", unsafe_allow_html=True)
+    st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
     
-    # 컬럼을 나누어 당일/기간 대관을 한 줄에 표출
-    t_col1, t_col2 = st.columns(2)
-    show_today = t_col1.checkbox("📌 당일", value=True)
-    show_period = t_col2.checkbox("🗓️ 기간", value=False)
+    # 모바일 한 줄 표출을 위한 컬럼 분할 (간격 최소화)
+    t_col1, t_col2 = st.columns([1, 1])
+    with t_col1:
+        show_today = st.checkbox("당일 대관", value=True)
+    with t_col2:
+        show_period = st.checkbox("기간 대관", value=False)
     
-    # (4) 검색 버튼 (간격 축소)
-    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+    # (4) 검색 버튼
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 수집 함수
