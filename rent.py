@@ -6,34 +6,31 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 간격 정밀 조정 (구분선 및 체크박스)
+# CSS: 각 요소별 간격 정밀 조정
 st.markdown("""
 <style>
-    /* 상단 여백 최소화 */
+    /* 상단 여백 및 전체 폭 최적화 */
     .block-container { 
-        padding-top: 0.5rem !important; 
+        padding-top: 1rem !important; 
         padding-bottom: 0rem !important; 
         max-width: 500px !important; 
     }
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* 전체 폰트 크기 */
+    /* 전체 폰트 설정 */
     html, body, [class*="st-"] { font-size: 17px !important; }
 
-    /* 제목 및 달력 간격 최소화 */
+    /* 제목 설정: 아래 요소와의 간격을 달력~건물 사이 간격과 유사하게 조정 */
     .main-title { 
         font-size: 24px !important; 
         font-weight: bold; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: -15px !important; 
+        margin-bottom: 15px !important; 
     }
     
-    /* 필터 영역 설정 */
-    .filter-container { padding: 5px 0px; }
-    
-    /* 건물 체크박스 간격 (미세하게 조정) */
+    /* 건물 체크박스 간격 */
     .stCheckbox { 
         margin-top: -8px !important; 
         margin-bottom: -8px !important; 
@@ -44,13 +41,13 @@ st.markdown("""
         line-height: 1.3 !important;
     }
 
-    /* 구분선(Line) 간격 줄이기 */
+    /* 구분선 및 섹션 간격 */
     hr {
         margin-top: 10px !important;
         margin-bottom: 10px !important;
     }
     
-    /* 검색 결과 카드 디자인 */
+    /* 검색 결과 디자인 */
     .building-header { 
         font-size: 20px !important; 
         font-weight: bold; 
@@ -75,12 +72,10 @@ st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div
 
 # 2. 검색 필터 영역
 with st.container():
-    st.markdown('<div class="filter-container">', unsafe_allow_html=True)
-    
     # (1) 날짜 선택
     target_date = st.date_input("📅 날짜 선택", value=date(2026, 3, 12))
     
-    st.markdown("<div style='margin-top:5px;'><b>🏢 건물 선택</b></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:10px;'><b>🏢 건물 선택</b></div>", unsafe_allow_html=True)
     ALL_BUILDINGS = [
         "성의회관", "의생명산업연구원", "옴니버스 파크", 
         "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", 
@@ -95,19 +90,18 @@ with st.container():
         if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
-    # (3) 구분선 및 대관 유형 (간격 축소)
+    # (3) 구분선 및 대관 유형 (한 줄 배치)
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown("<b>🗓️ 대관 유형</b>", unsafe_allow_html=True)
     
+    # 컬럼을 나누어 당일/기간 대관을 한 줄에 표출
     t_col1, t_col2 = st.columns(2)
-    show_today = t_col1.checkbox("📌 당일 대관", value=True)
-    show_period = t_col2.checkbox("🗓️ 기간 대관", value=False)
+    show_today = t_col1.checkbox("📌 당일", value=True)
+    show_period = t_col2.checkbox("🗓️ 기간", value=False)
     
-    # (4) 검색 버튼
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    # (4) 검색 버튼 (간격 축소)
+    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # 3. 데이터 수집 함수
 @st.cache_data(ttl=300)
