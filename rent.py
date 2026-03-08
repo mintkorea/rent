@@ -7,9 +7,12 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 수정 (여백 축소 및 정렬 변경)
+# CSS 스타일 수정
 st.markdown("""
 <style>
+    /* 상단 앵커 위치 조절 */
+    #top-anchor { position: absolute; top: 0; left: 0; }
+
     .block-container { 
         padding: 1rem 1.2rem !important; 
         max-width: 500px !important; 
@@ -56,7 +59,6 @@ st.markdown("""
         margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
-    /* 카드 내 여백 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
         padding: 12px; border-radius: 5px; 
@@ -70,7 +72,6 @@ st.markdown("""
     .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
     .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
     
-    /* 관리부서 우측 정렬을 위한 컨테이너 */
     .bottom-info { 
         font-size: 12px; color: #666; margin-top: 6px; 
         display: flex; justify-content: space-between; align-items: flex-end;
@@ -82,19 +83,31 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* TOP 버튼 중앙 정렬 스타일 */
-    #topBtn {
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        z-index: 99; border: none; outline: none; background-color: #1E3A5F;
-        color: white; cursor: pointer; padding: 10px 20px;
-        border-radius: 30px; font-size: 14px; font-weight: bold;
+    /* TOP 버튼 중앙 정렬 및 링크 스타일 */
+    .top-link-container {
+        position: fixed;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        z-index: 999;
+    }
+    .top-link {
+        display: inline-block;
+        background-color: #1E3A5F;
+        color: white !important;
+        padding: 10px 25px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: bold;
+        text-decoration: none !important;
         box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-        display: none;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div id="top"></div>', unsafe_allow_html=True)
+# 최상단 앵커 태그
+st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 
 # 2. 메인 UI
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
@@ -194,26 +207,12 @@ if search_clicked:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
+        
+        # 최하단에 TOP 링크 배치 (항상 중앙 고정)
+        st.markdown("""
+            <div class="top-link-container">
+                <a href="#top-anchor" class="top-link">TOP ▲</a>
+            </div>
+        """, unsafe_allow_html=True)
     else:
         st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
-
-# TOP 버튼 (중앙 정렬 스크립트 포함)
-components.html(
-    """
-    <button onclick="topFunction()" id="topBtn" title="Go to top">TOP ▲</button>
-    <script>
-        var mybutton = document.getElementById("topBtn");
-        window.onscroll = function() {
-            if (window.parent.pageYOffset > 300) {
-                mybutton.style.display = "block";
-            } else {
-                mybutton.style.display = "none";
-            }
-        };
-        function topFunction() {
-            window.parent.scrollTo({top: 0, behavior: 'smooth'});
-        }
-    </script>
-    """,
-    height=70,
-)
