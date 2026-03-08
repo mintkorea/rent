@@ -2,15 +2,25 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
+import urllib.parse
 
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# 세션 상태 관리
+# [세션 상태 관리]
 if 'search_date' not in st.session_state:
     st.session_state.search_date = date(2026, 3, 12)
 if 'triggered' not in st.session_state:
     st.session_state.triggered = False
+
+# 쿼리 파라미터를 통한 날짜 이동 처리 (HTML 버튼 클릭 대응)
+query_params = st.query_params
+if "move" in query_params:
+    move_val = int(query_params["move"])
+    st.session_state.search_date += timedelta(days=move_val)
+    st.session_state.triggered = True
+    st.query_params.clear()
+    st.rerun()
 
 # 요일 및 근무조 설정
 WEEKDAY_KR = ['월', '화', '수', '목', '금', '토', '일']
@@ -22,7 +32,7 @@ def get_shift_group(dt):
     diff = (dt - base_date).days
     return SHIFT_TYPES[(diff + 1) % 3]
 
-# CSS 스타일 (타이틀 박스 폭 축소 및 버튼 높이 일치)
+# CSS: 타이틀 박스와 화살표를 하나의 Bar로 합체
 st.markdown("""
 <style>
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
@@ -30,46 +40,52 @@ st.markdown("""
     .main-title { font-size: 22px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
     .sub-label { font-size: 15px !important; font-weight: 800; color: #2E5077; margin-top: 15px !important; display: block; margin-bottom: 5px; }
     
-    /* 네비게이션 컨테이너 레이아웃 */
-    .nav-row {
+    /* 일체형 네비게이션 바 스타일 */
+    .nav-bar {
         display: flex;
-        align-items: stretch; /* 자식 요소들의 높이를 동일하게 맞춤 */
+        align-items: stretch;
         justify-content: center;
+        width: 100%;
         margin: 20px 0;
-        gap: 0px; /* 버튼과 박스 사이 간격 제거 */
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
     }
-
-    /* 중앙 타이틀 박스 스타일 */
-    .combined-header-core {
+    
+    .nav-btn {
+        background-color: #F8FAFC;
+        border: 1px solid #CBD5E1;
+        color: #1E3A5F;
+        width: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 18px;
+        transition: background 0.2s;
+    }
+    .nav-btn:hover { background-color: #E2E8F0; }
+    
+    /* 왼쪽 버튼 둥글게 */
+    .btn-left { border-top-left-radius: 10px; border-bottom-left-radius: 10px; border-right: none; }
+    /* 오른쪽 버튼 둥글게 */
+    .btn-right { border-top-right-radius: 10px; border-bottom-right-radius: 10px; border-left: none; }
+    
+    /* 중앙 타이틀 박스 */
+    .title-box {
         background-color: #F1F5F9;
-        padding: 8px 20px;
         border-top: 1px solid #CBD5E1;
         border-bottom: 1px solid #CBD5E1;
+        padding: 8px 15px;
+        flex: 1;
+        max-width: 320px;
         text-align: center;
-        min-width: 280px; /* 폭을 적절히 줄임 */
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
-
-    /* 화살표 버튼 커스텀 (높이 100% 반영) */
-    .stButton > button {
-        border-radius: 0px !important; /* 각진 버튼으로 일체감 강조 */
-        height: 100% !important;
-        min-height: 56px !important; /* 타이틀 박스 높이에 맞춤 */
-        margin: 0 !important;
-        border: 1px solid #CBD5E1 !important;
-        background-color: #F8FAFC !important;
-        color: #1E3A5F !important;
-        transition: 0.2s;
-        width: 45px !important;
-    }
-    /* 왼쪽 버튼 모서리 둥글게 */
-    button[key="arrow_prev"] { border-top-left-radius: 10px !important; border-bottom-left-radius: 10px !important; border-right: none !important; }
-    /* 오른쪽 버튼 모서리 둥글게 */
-    button[key="arrow_next"] { border-top-right-radius: 10px !important; border-bottom-right-radius: 10px !important; border-left: none !important; }
-    
-    .stButton > button:hover { background-color: #E2E8F0 !important; }
+    .t-main { font-size: 15px; font-weight: 800; color: #1E3A5F; margin-bottom: 2px; }
+    .t-sub { font-size: 14px; font-weight: 700; }
 
     .building-header { font-size: 17px !important; font-weight: bold; color: #2E5077; margin-top: 25px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
     .event-card { border: 1px solid #E0E0E0; border-left: 6px solid #2E5077; padding: 12px; border-radius: 8px; margin-bottom: 10px; background-color: #ffffff; }
@@ -77,7 +93,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 상단 검색 필터 영역
+# 2. 상단 검색 조건 설정 영역
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -107,7 +123,7 @@ def fetch_data(dt):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력 섹션 (폭 축소 및 높이 일치형 네비게이션)
+# 4. 결과 출력 섹션 (일체형 Bar 디자인)
 if st.session_state.triggered:
     st.write("---")
     
@@ -116,28 +132,19 @@ if st.session_state.triggered:
     t_color = "#0000FF" if w_idx == 5 else ("#FF0000" if w_idx == 6 else "#1E3A5F")
     shift = get_shift_group(curr)
 
-    # 일체형 수평 배치 (컬럼 간격 0으로 설정)
-    nav_l, nav_c, nav_r = st.columns([0.15, 0.7, 0.15], gap="small")
-    
-    with nav_l:
-        if st.button("◀", key="arrow_prev", use_container_width=True):
-            st.session_state.search_date -= timedelta(days=1)
-            st.rerun()
-
-    with nav_c:
-        st.markdown(f"""
-            <div class="combined-header-core">
-                <div style="font-size: 15px; font-weight: 800; color: #1E3A5F; margin-bottom: 2px;">📋 성의교정 대관 현황</div>
-                <div style="font-size: 15px; font-weight: 700; color: {t_color};">
+    # HTML/CSS를 이용한 완전 밀착형 네비게이션 바 구현
+    st.markdown(f"""
+        <div class="nav-bar">
+            <a href="?move=-1" class="nav-btn btn-left" target="_self">◀</a>
+            <div class="title-box">
+                <div class="t-main">📋 성의교정 대관 현황</div>
+                <div class="t-sub" style="color:{t_color};">
                     [ {curr.strftime('%Y.%m.%d')}({WEEKDAY_KR[w_idx]}) | {shift} ]
                 </div>
             </div>
-        """, unsafe_allow_html=True)
-
-    with nav_r:
-        if st.button("▶", key="arrow_next", use_container_width=True):
-            st.session_state.search_date += timedelta(days=1)
-            st.rerun()
+            <a href="?move=1" class="nav-btn btn-right" target="_self">▶</a>
+        </div>
+    """, unsafe_allow_html=True)
 
     # 데이터 출력 로직
     df = fetch_data(st.session_state.search_date)
