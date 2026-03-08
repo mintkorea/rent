@@ -2,11 +2,12 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime, date
+import streamlit.components.v1 as components
 
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 디자인 디테일 조정
+# CSS 및 스크롤 스크립트
 st.markdown("""
 <style>
     .block-container { 
@@ -17,7 +18,6 @@ st.markdown("""
     
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 
-    /* 타이틀과 달력 사이 간격 최소화 */
     .main-title {
         font-size: 24px !important;
         font-weight: 800;
@@ -26,12 +26,10 @@ st.markdown("""
         margin-bottom: 5px !important; 
     }
 
-    /* 검색 버튼 아래 한 줄 여백 (구분선 대신 공간으로 분리) */
     div.stButton {
         margin-bottom: 35px !important;
     }
 
-    /* [수정] 결과 타이틀 박스 스타일 */
     .date-display { 
         text-align: center; font-size: 19px; font-weight: 800; 
         background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
@@ -90,12 +88,12 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
 for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v47_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v48_{b}"):
         selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_47")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_47")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
 
 st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
@@ -110,14 +108,27 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력
+# 4. 결과 출력 및 자동 스크롤
 if search_clicked:
-    # 라인(st.divider) 제거
+    # 앵커 포인트 설정 (결과 창의 시작점)
+    st.markdown('<div id="result-section"></div>', unsafe_allow_html=True)
     
     df_raw = get_data(target_date)
-    # [수정] 요청하신 문구 형식으로 변경: 성의교정 대관 현황(YYYY.MM.DD)
     formatted_date = target_date.strftime("%Y.%m.%d")
     st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
+
+    # JavaScript를 이용한 부드러운 스크롤 실행
+    components.html(
+        f"""
+        <script>
+            var element = window.parent.document.getElementById("result-section");
+            if (element) {{
+                element.scrollIntoView({{behavior: "smooth", block: "start"}});
+            }}
+        </script>
+        """,
+        height=0,
+    )
 
     if not df_raw.empty:
         temp_df = df_raw.copy()
