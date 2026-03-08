@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (TOP 버튼 및 레이아웃 수정)
+# CSS 스타일 수정 (여백 축소 및 정렬 변경)
 st.markdown("""
 <style>
     .block-container { 
@@ -53,41 +53,47 @@ st.markdown("""
 
     .section-title { 
         font-size: 16px; font-weight: bold; color: #555; 
-        margin: 15px 0 8px 0; padding-left: 5px; border-left: 4px solid #ccc; 
+        margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
+    /* 카드 내 여백 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 15px; border-radius: 5px; 
-        margin-bottom: 12px !important; 
+        padding: 12px; border-radius: 5px; 
+        margin-bottom: 10px !important; 
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05); 
         background-color: #ffffff;
     }
     .today-card { background-color: #F8FAFF; } 
     
     .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
-    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 4px; }
-    .event-name { font-size: 14px; margin-top: 6px; color: #333; font-weight: 500; }
-    .bottom-info { font-size: 12px; color: #666; margin-top: 6px; }
-    .period-label { color: #d63384; font-weight: bold; }
-    .dept-label { margin-left: 10px; padding-left: 10px; border-left: 1px solid #ddd; }
+    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
+    .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
+    
+    /* 관리부서 우측 정렬을 위한 컨테이너 */
+    .bottom-info { 
+        font-size: 12px; color: #666; margin-top: 6px; 
+        display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .dept-label { text-align: right; flex-grow: 1; }
+    .period-label { color: #d63384; font-weight: bold; white-space: nowrap; }
 
     .status-badge { display: inline-block; padding: 2px 10px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* TOP 버튼 스타일 */
+    /* TOP 버튼 중앙 정렬 스타일 */
     #topBtn {
-        position: fixed; bottom: 20px; right: 20px; z-index: 99;
-        border: none; outline: none; background-color: #1E3A5F;
-        color: white; cursor: pointer; padding: 12px 16px;
-        border-radius: 50%; font-size: 14px; font-weight: bold;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 99; border: none; outline: none; background-color: #1E3A5F;
+        color: white; cursor: pointer; padding: 10px 20px;
+        border-radius: 30px; font-size: 14px; font-weight: bold;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        display: none;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 최상단 앵커 (TOP 버튼용)
 st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 
 # 2. 메인 UI
@@ -108,7 +114,6 @@ show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
 show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
 
 st.write(" ")
-# 검색 버튼 위치에 앵커 포인트 설정
 st.markdown('<div id="btn-anchor"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
@@ -122,7 +127,7 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력 및 자동 스크롤
+# 4. 결과 출력
 if search_clicked:
     df_raw = get_data(target_date)
     target_weekday = str(target_date.weekday() + 1)
@@ -130,7 +135,6 @@ if search_clicked:
     formatted_date = target_date.strftime("%Y.%m.%d")
     st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
 
-    # 검색 버튼 위치로 부드럽게 스크롤
     components.html(
         f"""
         <script>
@@ -146,72 +150,68 @@ if search_clicked:
     if not df_raw.empty:
         for bu in selected_bu:
             bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)].copy()
-
-            if bu_df.empty:
-                continue
-            else:
-                st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-                bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
-                bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
-                
-                today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
-                period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
-                
-                if show_today and not today_ev.empty:
-                    st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
-                    for _, row in today_ev.iterrows():
+            if bu_df.empty: continue
+            
+            st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+            bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
+            bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
+            
+            today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
+            period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
+            
+            if show_today and not today_ev.empty:
+                st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
+                for _, row in today_ev.iterrows():
+                    s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
+                    st.markdown(f"""
+                    <div class="event-card today-card">
+                        <span class="status-badge {s_cls}">{s_txt}</span>
+                        <div class="place-name">📍 {row['placeNm']}</div>
+                        <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                        <div class="event-name">📄 {row['eventNm']}</div>
+                        <div class="bottom-info">
+                            <span class="period-label">🗓️ {row['startDt']}</span>
+                            <span class="dept-label">👥 {row['mgDeptNm']}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            if show_period and not period_ev.empty:
+                valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
+                if not valid_period_ev.empty:
+                    st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
+                    for _, row in valid_period_ev.iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""
-                        <div class="event-card today-card">
+                        <div class="event-card">
                             <span class="status-badge {s_cls}">{s_txt}</span>
                             <div class="place-name">📍 {row['placeNm']}</div>
                             <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
                             <div class="event-name">📄 {row['eventNm']}</div>
                             <div class="bottom-info">
-                                <span class="period-label">🗓️ {row['startDt']}</span>
+                                <span class="period-label">🗓️ {row['startDt']} ~ {row['endDt']}</span>
                                 <span class="dept-label">👥 {row['mgDeptNm']}</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-                
-                if show_period and not period_ev.empty:
-                    valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
-                    
-                    if not valid_period_ev.empty:
-                        st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
-                        for _, row in valid_period_ev.iterrows():
-                            s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                            st.markdown(f"""
-                            <div class="event-card">
-                                <span class="status-badge {s_cls}">{s_txt}</span>
-                                <div class="place-name">📍 {row['placeNm']}</div>
-                                <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                                <div class="event-name">📄 {row['eventNm']}</div>
-                                <div class="bottom-info">
-                                    <span class="period-label">🗓️ {row['startDt']} ~ {row['endDt']}</span>
-                                    <span class="dept-label">👥 {row['mgDeptNm']}</span>
-                                </div>
-                            </div>
-                            """, unsafe_allow_html=True)
     else:
         st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
 
-# TOP 버튼 구현
+# TOP 버튼 (중앙 정렬 스크립트 포함)
 components.html(
     """
-    <button onclick="topFunction()" id="topBtn" title="Go to top">TOP</button>
+    <button onclick="topFunction()" id="topBtn" title="Go to top">TOP ▲</button>
     <script>
         var mybutton = document.getElementById("topBtn");
-        window.onscroll = function() {scrollFunction()};
-        function scrollFunction() {
-            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        window.onscroll = function() {
+            if (window.parent.pageYOffset > 300) {
                 mybutton.style.display = "block";
             } else {
                 mybutton.style.display = "none";
             }
-        }
+        };
         function topFunction() {
-            window.parent.document.getElementById("top").scrollIntoView({behavior: "smooth"});
+            window.parent.scrollTo({top: 0, behavior: 'smooth'});
         }
     </script>
     """,
