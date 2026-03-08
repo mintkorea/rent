@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 및 스크롤 스크립트
+# CSS 스타일 (TOP 버튼 및 레이아웃 수정)
 st.markdown("""
 <style>
     .block-container { 
@@ -65,8 +65,8 @@ st.markdown("""
     }
     .today-card { background-color: #F8FAFF; } 
     
-    .place-time { font-size: 16px; font-weight: bold; color: #1E3A5F; }
-    .time-highlight { color: #FF4B4B; margin-left: 8px; }
+    .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
+    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 4px; }
     .event-name { font-size: 14px; margin-top: 6px; color: #333; font-weight: 500; }
     .bottom-info { font-size: 12px; color: #666; margin-top: 6px; }
     .period-label { color: #d63384; font-weight: bold; }
@@ -75,8 +75,20 @@ st.markdown("""
     .status-badge { display: inline-block; padding: 2px 10px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
+
+    /* TOP 버튼 스타일 */
+    #topBtn {
+        position: fixed; bottom: 20px; right: 20px; z-index: 99;
+        border: none; outline: none; background-color: #1E3A5F;
+        color: white; cursor: pointer; padding: 12px 16px;
+        border-radius: 50%; font-size: 14px; font-weight: bold;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# 최상단 앵커 (TOP 버튼용)
+st.markdown('<div id="top"></div>', unsafe_allow_html=True)
 
 # 2. 메인 UI
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
@@ -87,7 +99,6 @@ target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility=
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
-# 사용자님의 원본 배열(수직) 유지
 for b in ALL_BUILDINGS:
     if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v48_{b}"):
         selected_bu.append(b)
@@ -97,6 +108,8 @@ show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
 show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
 
 st.write(" ")
+# 검색 버튼 위치에 앵커 포인트 설정
+st.markdown('<div id="btn-anchor"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 로직
@@ -111,19 +124,17 @@ def get_data(selected_date):
 
 # 4. 결과 출력 및 자동 스크롤
 if search_clicked:
-    st.markdown('<div id="result-section"></div>', unsafe_allow_html=True)
-    
     df_raw = get_data(target_date)
-    # 현재 선택 날짜의 요일 인덱스 (API 기준 1~7)
     target_weekday = str(target_date.weekday() + 1)
     
     formatted_date = target_date.strftime("%Y.%m.%d")
     st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
 
+    # 검색 버튼 위치로 부드럽게 스크롤
     components.html(
         f"""
         <script>
-            var element = window.parent.document.getElementById("result-section");
+            var element = window.parent.document.getElementById("btn-anchor");
             if (element) {{
                 element.scrollIntoView({{behavior: "smooth", block: "start"}});
             }}
@@ -146,7 +157,6 @@ if search_clicked:
                 today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
                 period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
                 
-                # 1. 당일 대관 출력
                 if show_today and not today_ev.empty:
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                     for _, row in today_ev.iterrows():
@@ -154,15 +164,17 @@ if search_clicked:
                         st.markdown(f"""
                         <div class="event-card today-card">
                             <span class="status-badge {s_cls}">{s_txt}</span>
-                            <div class="place-time">📍 {row['placeNm']} <span class="time-highlight">⏰ {row['startTime']} ~ {row['endTime']}</span></div>
+                            <div class="place-name">📍 {row['placeNm']}</div>
+                            <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
                             <div class="event-name">📄 {row['eventNm']}</div>
-                            <div class="bottom-info">👥 {row['mgDeptNm']}</div>
+                            <div class="bottom-info">
+                                <span class="period-label">🗓️ {row['startDt']}</span>
+                                <span class="dept-label">👥 {row['mgDeptNm']}</span>
+                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                 
-                # 2. 기간 대관 출력 (요일 필터링 로직 적용)
                 if show_period and not period_ev.empty:
-                    # 요일 체크: allowDay에 현재 요일 코드가 포함된 것만 추출
                     valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
                     
                     if not valid_period_ev.empty:
@@ -172,7 +184,8 @@ if search_clicked:
                             st.markdown(f"""
                             <div class="event-card">
                                 <span class="status-badge {s_cls}">{s_txt}</span>
-                                <div class="place-time">📍 {row['placeNm']} <span class="time-highlight">⏰ {row['startTime']} ~ {row['endTime']}</span></div>
+                                <div class="place-name">📍 {row['placeNm']}</div>
+                                <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
                                 <div class="event-name">📄 {row['eventNm']}</div>
                                 <div class="bottom-info">
                                     <span class="period-label">🗓️ {row['startDt']} ~ {row['endDt']}</span>
@@ -182,3 +195,25 @@ if search_clicked:
                             """, unsafe_allow_html=True)
     else:
         st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
+
+# TOP 버튼 구현
+components.html(
+    """
+    <button onclick="topFunction()" id="topBtn" title="Go to top">TOP</button>
+    <script>
+        var mybutton = document.getElementById("topBtn");
+        window.onscroll = function() {scrollFunction()};
+        function scrollFunction() {
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                mybutton.style.display = "block";
+            } else {
+                mybutton.style.display = "none";
+            }
+        }
+        function topFunction() {
+            window.parent.document.getElementById("top").scrollIntoView({behavior: "smooth"});
+        }
+    </script>
+    """,
+    height=70,
+)
