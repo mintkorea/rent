@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 타이틀 스타일 및 모바일 최적화 레이아웃
+# CSS: 배경 박스 및 레이아웃 최적화
 st.markdown("""
 <style>
     /* 전체 여백 및 폭 최적화 */
@@ -19,7 +19,7 @@ st.markdown("""
     /* 전체 폰트 크기 */
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 메인 타이틀 및 결과 헤더 공통 스타일 */
+    /* 메인 타이틀 및 결과 헤더 스타일 */
     .main-title { 
         font-size: 22px !important; 
         font-weight: 800; 
@@ -29,17 +29,26 @@ st.markdown("""
         padding-top: 5px;
     }
     
-    /* 부제목: 마진 최소화 */
+    /* 배경 박스 */
+    .filter-container {
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 15px;
+    }
+
+    /* 부제목 */
     .sub-header {
         font-size: 17px !important;
         font-weight: 800 !important;
         color: #2E5077;
-        margin-top: 6px !important;
+        margin-top: 5px !important;
         margin-bottom: -10px !important;
         display: block;
     }
 
-    /* 건물명 체크박스 여백 최적화 */
+    /* 건물명 체크박스 */
     .stCheckbox { 
         margin-top: -6px !important; 
         margin-bottom: -6px !important; 
@@ -50,7 +59,7 @@ st.markdown("""
         line-height: 1.3 !important;
     }
 
-    /* 대관 유형 가로 강제 배치 (Flex) */
+    /* 대관 유형 가로 강제 배치 */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -77,7 +86,7 @@ st.markdown("""
         padding: 8px; 
         border-radius: 6px; 
         margin-bottom: 6px; 
-        background-color: #F8FAFF;
+        background-color: #ffffff; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -86,28 +95,37 @@ st.markdown("""
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 # 2. 검색 필터 영역
-st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
-target_date = st.date_input("날짜 선택", value=date(2026, 3, 12), label_visibility="collapsed")
+with st.container():
+    st.markdown('<div class="filter-container">', unsafe_allow_html=True)
+    
+    # (1) 날짜 선택
+    st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
+    target_date = st.date_input("날짜 선택", value=date(2026, 3, 12), label_visibility="collapsed")
 
-st.markdown('<span class="sub-header">🏢 건물 선택</span>', unsafe_allow_html=True)
-ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-DEFAULT_BUILDINGS = ["성의회관", "의생명산업연구원"]
+    # (2) 건물 선택
+    st.markdown('<span class="sub-header">🏢 건물 선택</span>', unsafe_allow_html=True)
+    ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+    DEFAULT_BUILDINGS = ["성의회관", "의생명산업연구원"]
 
-selected_buildings = []
-for bu in ALL_BUILDINGS:
-    is_default = bu in DEFAULT_BUILDINGS
-    if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
-        selected_buildings.append(bu)
-        
-st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns([1, 1, 0.1])
-with c1:
-    show_today = st.checkbox("당일 대관", value=True)
-with c2:
-    show_period = st.checkbox("기간 대관", value=False)
+    selected_buildings = []
+    for bu in ALL_BUILDINGS:
+        is_default = bu in DEFAULT_BUILDINGS
+        if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
+            selected_buildings.append(bu)
+            
+    # (3) 대관 유형
+    st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        show_today = st.checkbox("당일 대관", value=True)
+    with c2:
+        show_period = st.checkbox("기간 대관", value=False)
 
-st.write("") 
-search_clicked = st.button("🔍 검색하기", use_container_width=True)
+    # (4) 검색 버튼
+    st.write("") 
+    search_clicked = st.button("🔍 검색하기", use_container_width=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # 3. 데이터 수집 함수
 @st.cache_data(ttl=300)
@@ -132,7 +150,10 @@ if search_clicked:
     else:
         df = pd.DataFrame()
 
-    # [수정] 결과 헤더를 메인 타이틀 스타일로 변경
+    # [수정] 결과 헤더 위에 빈 라인 추가
+    st.write("") 
+    
+    # 결과 헤더 스타일
     formatted_date = target_date.strftime('%m/%d')
     st.markdown(f'<div class="main-title">🏢 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
 
