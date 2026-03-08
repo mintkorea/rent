@@ -17,11 +17,14 @@ st.markdown("""
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
     div.stButton { margin-bottom: 35px !important; }
     
+    /* 타이틀 및 날짜 행 분리 스타일 */
     .date-display { 
         text-align: center; font-size: 19px; font-weight: 800; 
         background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
-        margin-bottom: 20px; color: #1E3A5F;
+        margin-bottom: 20px; color: #1E3A5F; line-height: 1.5;
     }
+    .date-sub { font-size: 17px; display: block; margin-top: 5px; color: #2E5077; }
+    
     .sat { color: #007bff; font-weight: bold; } 
     .sun { color: #ff4b4b; font-weight: bold; } 
     
@@ -40,7 +43,6 @@ st.markdown("""
     .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
     .shift-label { color: #E67E22; font-weight: 800; margin-left: 5px; } 
 
-    /* 하단 정보 개행 구조 */
     .bottom-info { font-size: 12px; color: #666; margin-top: 8px; border-top: 1px dotted #eee; padding-top: 6px; }
     .dept-label { display: block; text-align: right; margin-top: 2px; }
     .period-label { display: block; color: #d63384; font-weight: bold; }
@@ -54,14 +56,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 1. 근무조 계산 함수 (3월 1일 A조 기준)
 def get_work_shift(target_dt):
     base_date = date(2026, 3, 1)
     diff_days = (target_dt - base_date).days
     shifts = ["A조", "B조", "C조"]
     return shifts[diff_days % 3]
 
-# 2. 요일 형식화 함수
 def get_day_format(dt_input):
     if isinstance(dt_input, str):
         dt = datetime.strptime(dt_input.replace(".", "-"), "%Y-%m-%d").date()
@@ -87,6 +87,8 @@ st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsaf
 show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
 show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
 
+# 이동할 앵커 포인트를 검색 버튼 바로 위에 배치
+st.markdown('<div id="result-top"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 @st.cache_data(ttl=300)
@@ -99,13 +101,23 @@ def get_data(selected_date):
     except: return pd.DataFrame()
 
 if search_clicked:
+    # 검색 클릭 시 결과 상단으로 자동 스크롤
+    components.html("""<script>window.parent.document.getElementById('result-top').scrollIntoView({behavior: 'smooth'});</script>""", height=0)
+    
     df_raw = get_data(target_date)
     target_weekday = str(target_date.weekday() + 1)
-    current_shift = get_work_shift(target_date) # 현재 날짜 근무조 계산
+    current_shift = get_work_shift(target_date)
     
     f_date = target_date.strftime("%Y.%m.%d")
     day_html = get_day_format(target_date)
-    st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({f_date} {day_html})</div>', unsafe_allow_html=True)
+    
+    # 1. 타이틀과 날짜 행 분리 및 요일 뒤 조 표시 반영
+    st.markdown(f"""
+    <div class="date-display">
+        📋 성의교정 대관 현황
+        <span class="date-sub">{f_date} {day_html} {current_shift}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     if not df_raw.empty:
         for bu in selected_bu:
@@ -127,7 +139,7 @@ if search_clicked:
                         <span class="status-badge {s_cls}">{s_txt}</span>
                         <div class="place-name">📍 {row['placeNm']}</div>
                         <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                        <div class="event-name">📄 {row['eventNm']} <span class='shift-label'>({current_shift})</span></div>
+                        <div class="event-name">📄 {row['eventNm']}</div>
                         <div class="bottom-info">
                             <span class="period-label">🗓️ {row['startDt']} {get_day_format(row['startDt'])}</span>
                             <span class="dept-label">👥 {row['mgDeptNm']}</span>
@@ -145,7 +157,7 @@ if search_clicked:
                             <span class="status-badge {s_cls}">{s_txt}</span>
                             <div class="place-name">📍 {row['placeNm']}</div>
                             <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                            <div class="event-name">📄 {row['eventNm']} <span class='shift-label'>({current_shift})</span></div>
+                            <div class="event-name">📄 {row['eventNm']}</div>
                             <div class="bottom-info">
                                 <span class="period-label">🗓️ {row['startDt']}{get_day_format(row['startDt'])} ~ {row['endDt']}{get_day_format(row['endDt'])}</span>
                                 <span class="dept-label">👥 {row['mgDeptNm']}</span>
