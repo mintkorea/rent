@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 박스 스타일 및 레이아웃 최적화
+# CSS: 박스 디자인 통일 및 일체화
 st.markdown("""
 <style>
     .block-container { 
@@ -16,23 +16,33 @@ st.markdown("""
     #MainMenu, header { visibility: hidden; }
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 타이틀 공통 스타일 */
-    .main-title { 
-        font-size: 22px !important; 
-        font-weight: 800; 
-        text-align: center; 
-        color: #1E3A5F; 
-        margin: 0 !important; 
-        padding: 5px 0;
-    }
-    
-    /* 배경 박스 (필터 박스 및 결과 타이틀 박스 공통) */
+    /* 배경 박스: 타이틀과 내용을 하나로 묶는 스타일 */
     .filter-container {
         background-color: #f8f9fa;
         padding: 12px;
         border-radius: 10px;
         border: 1px solid #e9ecef;
         margin-bottom: 15px;
+    }
+
+    /* 박스 내부 타이틀 스타일 */
+    .inner-title { 
+        font-size: 22px !important; 
+        font-weight: 800; 
+        text-align: center; 
+        color: #1E3A5F; 
+        margin: 0 !important; 
+        padding-bottom: 10px;
+    }
+    
+    /* 결과 박스 전용 타이틀 스타일 */
+    .result-title {
+        font-size: 22px !important;
+        font-weight: 800;
+        text-align: center;
+        color: #1E3A5F;
+        margin: 0 !important;
+        padding: 5px 0;
     }
 
     /* 부제목 */
@@ -45,58 +55,30 @@ st.markdown("""
         display: block;
     }
 
-    /* 체크박스 설정 */
+    /* 체크박스 및 대관 유형 한 줄 고정 */
     .stCheckbox { margin-top: -6px !important; margin-bottom: -6px !important; }
-    .stCheckbox label p { font-size: 16px !important; font-weight: 500; }
-
-    /* 대관 유형 가로 배치 강제 (Flexbox) */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         gap: 10px !important;
     }
-    div[data-testid="stHorizontalBlock"] > div {
-        width: auto !important;
-        min-width: auto !important;
-    }
-
-    /* 결과 개별 건물 헤더 및 카드 */
-    .building-header { 
-        font-size: 19px !important; 
-        font-weight: bold; 
-        color: #2E5077; 
-        margin-top: 15px; 
-        border-bottom: 2px solid #2E5077; 
-        padding-bottom: 2px; 
-    }
-    .event-card { 
-        border: 1px solid #E0E0E0; 
-        border-left: 5px solid #2E5077; 
-        padding: 8px; 
-        border-radius: 6px; 
-        margin-bottom: 6px; 
-        background-color: #ffffff; 
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# 상단 메인 타이틀
-st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
-st.write("") 
-
-# 2. 검색 필터 영역 (배경 박스 적용)
+# 2. 메인 필터 영역 (타이틀을 박스 내부 최상단에 배치)
 with st.container():
     st.markdown('<div class="filter-container">', unsafe_allow_html=True)
+    st.markdown('<div class="inner-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
+    
     st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
     target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility="collapsed")
 
     st.markdown('<span class="sub-header">🏢 건물 선택</span>', unsafe_allow_html=True)
     ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-    DEFAULT_BUILDINGS = ["성의회관", "의생명산업연구원"]
     selected_buildings = []
     for bu in ALL_BUILDINGS:
-        if st.checkbox(bu, value=(bu in DEFAULT_BUILDINGS), key=f"bu_{bu}"):
+        if st.checkbox(bu, value=(bu in ["성의회관", "의생명산업연구원"]), key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
     st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
@@ -108,7 +90,7 @@ with st.container():
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. 데이터 수집 함수
+# 3. 데이터 수집
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -129,22 +111,19 @@ if search_clicked:
         temp_df['endDt_dt'] = pd.to_datetime(temp_df['endDt']).dt.date
         df = temp_df[(temp_df['startDt_dt'] <= target_date) & (temp_df['endDt_dt'] >= target_date)]
 
-    # 결과 영역 사이 빈 라인
+    # 결과 타이틀 박스 (박스 안에 타이틀이 들어간 일체형 구조)
     st.write("") 
-    
-    # [핵심 수정] 결과 타이틀을 필터와 동일한 filter-container 박스 안에 배치
     formatted_date = target_date.strftime('%m/%d')
     st.markdown(f"""
-    <div class="filter-container" style="margin-bottom: 20px;">
-        <div class="main-title">🏢 성의교정 대관 현황({formatted_date})</div>
+    <div class="filter-container">
+        <div class="result-title">🏢 성의교정 대관 현황({formatted_date})</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 개별 건물 결과 출력
+    # 개별 결과 (기존 동일)
     for bu in selected_buildings:
-        st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:19px; font-weight:bold; color:#2E5077; margin-top:15px; border-bottom:2px solid #2E5077;">🏢 {bu}</div>', unsafe_allow_html=True)
         bu_df = df[df['buNm'].str.contains(bu, na=False)].copy() if not df.empty else pd.DataFrame()
-
         if bu_df.empty:
             st.markdown('<div style="color:#888; font-size:14px; padding:2px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
         else:
@@ -155,4 +134,4 @@ if search_clicked:
                 if (is_period and not show_period) or (not is_period and not show_today): continue
                 s_txt = "확정" if row['status'] == 'Y' else "대기"
                 p_info = f"<br><span style='font-size:12px; color:#d63384;'>🗓️ {row['startDt']}~{row['endDt']}</span>" if is_period else ""
-                st.markdown(f'<div class="event-card"><b>📍 {row["placeNm"]}</b> ({s_txt})<br><span style="color:#FF4B4B;">⏰ {row["startTime"]}~{row["endTime"]}</span>{p_info}<br><span style="font-size:14px;">📄 {row["eventNm"]}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="border:1px solid #E0E0E0; border-left:5px solid #2E5077; padding:8px; border-radius:6px; margin-bottom:6px; background-color:#ffffff;"><b>📍 {row["placeNm"]}</b> ({s_txt})<br><span style="color:#FF4B4B;">⏰ {row["startTime"]}~{row["endTime"]}</span>{p_info}<br><span style="font-size:14px;">📄 {row["eventNm"]}</span></div>', unsafe_allow_html=True)
