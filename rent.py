@@ -35,7 +35,11 @@ st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div
 st.sidebar.header("⚙️ 조회 설정")
 target_date = st.sidebar.date_input("조회 날짜 선택", value=date(2026, 3, 12))
 
-ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+ALL_BUILDINGS = [
+    "성의회관", "의생명산업연구원", "옴니버스 파크", 
+    "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", 
+    "대학본관", "서울성모별관"
+]
 selected_bu = st.sidebar.multiselect("건물 필터", options=ALL_BUILDINGS, default=ALL_BUILDINGS)
 
 @st.cache_data(ttl=300)
@@ -69,6 +73,7 @@ for bu in selected_bu:
     if bu_df.empty:
         st.markdown('<div class="no-data">ℹ️ 해당 날짜에 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
     else:
+        # 한글 우선 정렬
         def sort_priority(x):
             if not x: return 2
             first = str(x)[0]
