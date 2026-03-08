@@ -17,11 +17,11 @@ st.markdown("""
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
     div.stButton { margin-bottom: 35px !important; }
     
-    /* 타이틀 및 날짜 행 분리 스타일 */
+    /* 상단 타이틀 영역 행 분리 */
     .date-display { 
         text-align: center; font-size: 19px; font-weight: 800; 
         background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
-        margin-bottom: 20px; color: #1E3A5F; line-height: 1.5;
+        margin-bottom: 20px; color: #1E3A5F; line-height: 1.4;
     }
     .date-sub { font-size: 17px; display: block; margin-top: 5px; color: #2E5077; }
     
@@ -32,20 +32,24 @@ st.markdown("""
     .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 16px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     
+    /* 카드 여백 및 행간 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 10px 12px; border-radius: 5px; margin-bottom: 10px !important; 
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.3 !important; 
+        padding: 8px 12px; border-radius: 5px; margin-bottom: 10px !important; 
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.2 !important; 
     }
     .today-card { background-color: #F8FAFF; } 
     .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
     .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
     .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
-    .shift-label { color: #E67E22; font-weight: 800; margin-left: 5px; } 
-
-    .bottom-info { font-size: 12px; color: #666; margin-top: 8px; border-top: 1px dotted #eee; padding-top: 6px; }
-    .dept-label { display: block; text-align: right; margin-top: 2px; }
-    .period-label { display: block; color: #d63384; font-weight: bold; }
+    
+    /* 카드 하단 정보: 개행 없이 양끝 정렬 유지 */
+    .bottom-info { 
+        font-size: 12px; color: #666; margin-top: 6px; 
+        display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .dept-label { text-align: right; flex-grow: 1; }
+    .period-label { color: #d63384; font-weight: bold; white-space: nowrap; }
 
     .status-badge { display: inline-block; padding: 1px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
@@ -87,7 +91,6 @@ st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsaf
 show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
 show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
 
-# 이동할 앵커 포인트를 검색 버튼 바로 위에 배치
 st.markdown('<div id="result-top"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
@@ -101,7 +104,6 @@ def get_data(selected_date):
     except: return pd.DataFrame()
 
 if search_clicked:
-    # 검색 클릭 시 결과 상단으로 자동 스크롤
     components.html("""<script>window.parent.document.getElementById('result-top').scrollIntoView({behavior: 'smooth'});</script>""", height=0)
     
     df_raw = get_data(target_date)
@@ -111,7 +113,6 @@ if search_clicked:
     f_date = target_date.strftime("%Y.%m.%d")
     day_html = get_day_format(target_date)
     
-    # 1. 타이틀과 날짜 행 분리 및 요일 뒤 조 표시 반영
     st.markdown(f"""
     <div class="date-display">
         📋 성의교정 대관 현황
