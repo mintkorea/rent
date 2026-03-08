@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (행간 축소 및 요청 사항 반영)
+# CSS 스타일 (기준점 소스 유지 + 요약 바 스타일 추가)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -16,7 +16,7 @@ st.markdown("""
         padding: 1rem 1.2rem !important; 
         max-width: 500px !important; 
     }
-    #MainMenu, header { visibility: hidden; }
+    header { visibility: hidden; }
     
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 
@@ -32,11 +32,13 @@ st.markdown("""
         margin-bottom: 35px !important;
     }
 
+    /* 상단 요약 바: 요청하신 (목) | C조 형식 반영 */
     .date-display { 
-        text-align: center; font-size: 19px; font-weight: 800; 
-        background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
+        text-align: center; font-size: 17px; font-weight: 800; 
+        background-color: #F0F4F8; padding: 12px; border-radius: 10px; 
         margin-bottom: 20px; 
         color: #1E3A5F;
+        border: 1px solid #D1D9E6;
     }
 
     .sub-label {
@@ -58,14 +60,13 @@ st.markdown("""
         margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
-    /* 카드 설정 및 행간(line-height) 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
         padding: 8px 12px; border-radius: 5px; 
         margin-bottom: 10px !important; 
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05); 
         background-color: #ffffff;
-        line-height: 1.2 !important; /* 행간 대폭 축소 */
+        line-height: 1.2 !important;
     }
     .today-card { background-color: #F8FAFF; } 
     
@@ -84,7 +85,9 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* 우측 하단 플로팅 TOP 버튼 */
+    /* 내역 없음 스타일 */
+    .no-data { font-size: 13px; color: #888; padding: 10px 0; font-style: italic; }
+
     .top-link-container {
         position: fixed;
         bottom: 25px;
@@ -119,17 +122,20 @@ target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility=
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
-for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v48_{b}"):
-        selected_bu.append(b)
+cols = st.columns(2) # 공간 효율을 위해 2열 배치
+for i, b in enumerate(ALL_BUILDINGS):
+    with cols[i % 2]:
+        if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v48_{b}"):
+            selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_48")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_48")
+c1, c2 = st.columns(2)
+show_today = c1.checkbox("당일 대관", value=True, key="chk_today_48")
+show_period = c2.checkbox("기간 대관", value=True, key="chk_period_48")
 
 st.write(" ")
 st.markdown('<div id="btn-anchor"></div>', unsafe_allow_html=True)
-search_clicked = st.button("🔍 검색하기", use_container_width=True)
+search_clicked = st.button("🔍 검색하기", use_container_width=True, type="primary")
 
 # 3. 데이터 로직
 @st.cache_data(ttl=300)
@@ -144,11 +150,18 @@ def get_data(selected_date):
 # 4. 결과 출력
 if search_clicked:
     df_raw = get_data(target_date)
-    target_weekday = str(target_date.weekday() + 1)
+    target_weekday_idx = target_date.weekday()
+    weekday_list = ['월', '화', '수', '목', '금', '토', '일']
+    weekday_str = weekday_list[target_weekday_idx]
+    
+    # 조(Group) 정보 추출
+    group_info = df_raw.iloc[0].get('groupNm', '-') if not df_raw.empty and 'groupNm' in df_raw.columns else "-"
     
     formatted_date = target_date.strftime("%Y.%m.%d")
-    st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
+    # 요청하신 형식: 2026.03.12 (목) | C조 대관 현황
+    st.markdown(f'<div class="date-display">📋 {formatted_date} ({weekday_str}) | {group_info} 대관 현황</div>', unsafe_allow_html=True)
 
+    # 자동 스크롤 스크립트
     components.html(
         f"""
         <script>
@@ -162,19 +175,33 @@ if search_clicked:
     )
 
     if not df_raw.empty:
+        # 날짜 범위에 포함되는 데이터만 필터링
+        temp_df = df_raw.copy()
+        temp_df['startDt_dt'] = pd.to_datetime(temp_df['startDt']).dt.date
+        temp_df['endDt_dt'] = pd.to_datetime(temp_df['endDt']).dt.date
+        df_filtered = temp_df[(temp_df['startDt_dt'] <= target_date) & (temp_df['endDt_dt'] >= target_date)]
+
         for bu in selected_bu:
-            bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)].copy()
-            if bu_df.empty: continue
-            
             st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+            bu_df = df_filtered[df_filtered['buNm'].str.contains(bu, na=False)].copy()
+            
+            # 건물별 내역 유무 확인
+            if bu_df.empty:
+                st.markdown('<div class="no-data">ℹ️ 해당 건물에 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+                continue
+
             bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
             bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
             
+            # 당일/기간 필터링 및 출력
             today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
             period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
             
+            has_content = False
+
             if show_today and not today_ev.empty:
                 st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
+                has_content = True
                 for _, row in today_ev.iterrows():
                     s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                     st.markdown(f"""
@@ -191,9 +218,13 @@ if search_clicked:
                     """, unsafe_allow_html=True)
             
             if show_period and not period_ev.empty:
-                valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
+                # 기간 대관 중 해당 요일에 대관되는 것만 표시
+                target_weekday_code = str(target_weekday_idx + 1)
+                valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday_code in [d.strip() for d in str(x).split(",")])]
+                
                 if not valid_period_ev.empty:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
+                    has_content = True
                     for _, row in valid_period_ev.iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""
@@ -208,11 +239,14 @@ if search_clicked:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-        
+            
+            if not has_content:
+                st.markdown('<div class="no-data">ℹ️ 선택하신 유형의 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+
         st.markdown("""
             <div class="top-link-container">
                 <a href="#top-anchor" class="top-link">TOP</a>
             </div>
         """, unsafe_allow_html=True)
     else:
-        st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
+        st.info("해당 날짜에 전체 조회된 대관 내역이 없습니다.")
