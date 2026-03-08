@@ -2,4 +2,3 @@ Plaintext
 streamlit
 requests
 pandas
-openpyxl
