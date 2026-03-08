@@ -6,74 +6,69 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 부제목 폰트 강화 및 대관 유형 한 줄 배치
+# CSS: 전체 간격 압축 및 모바일 한 줄 배치 최적화
 st.markdown("""
 <style>
-    /* 상단 여백 및 전체 폭 최적화 */
+    /* 상단 및 전체 여백 극소화 */
     .block-container { 
-        padding-top: 1rem !important; 
+        padding-top: 0.5rem !important; 
         padding-bottom: 0rem !important; 
         max-width: 500px !important; 
     }
     #MainMenu { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* 전체 기본 폰트 */
-    html, body, [class*="st-"] { font-size: 16px !important; }
-
-    /* 메인 타이틀 */
+    /* 메인 타이틀: 아래 간격 대폭 축소 */
     .main-title { 
-        font-size: 26px !important; 
+        font-size: 24px !important; 
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: 20px !important; 
+        margin-bottom: 5px !important; 
     }
     
-    /* 부제목 스타일 (건물명보다 크고 진하게 조정) */
+    /* 부제목 스타일 */
     .sub-header {
-        font-size: 20px !important;
+        font-size: 19px !important;
         font-weight: 800 !important;
         color: #2E5077;
-        margin-top: 15px !important;
-        margin-bottom: 5px !important;
+        margin-top: 8px !important;
+        margin-bottom: 2px !important;
         display: block;
     }
 
-    /* 건물명 체크박스 텍스트 */
+    /* 체크박스 텍스트 및 간격 극소화 */
     .stCheckbox label p { 
-        font-size: 18px !important; 
+        font-size: 17px !important; 
         font-weight: 500;
-        line-height: 1.2 !important;
+        line-height: 1.1 !important;
     }
-    
-    /* 체크박스 자체 간격 축소 */
     .stCheckbox { 
-        margin-top: -10px !important; 
-        margin-bottom: -10px !important; 
+        margin-top: -12px !important; 
+        margin-bottom: -12px !important; 
     }
 
-    /* 구분선 */
-    hr {
-        margin-top: 15px !important;
-        margin-bottom: 10px !important;
+    /* 대관 유형 열 간격 조정 (한 줄 유지용) */
+    [data-testid="column"] {
+        padding: 0 !important;
+        min-width: 100px !important;
     }
 
     /* 결과 카드 디자인 */
     .building-header { 
-        font-size: 22px !important; 
+        font-size: 20px !important; 
         font-weight: bold; 
         color: #2E5077; 
-        margin-top: 20px; 
+        margin-top: 15px; 
         border-bottom: 2px solid #2E5077; 
-        padding-bottom: 5px; 
+        padding-bottom: 3px; 
     }
     .event-card { 
         border: 1px solid #E0E0E0; 
         border-left: 6px solid #2E5077; 
-        padding: 12px; 
+        padding: 10px; 
         border-radius: 8px; 
-        margin-bottom: 10px; 
+        margin-bottom: 8px; 
         background-color: #F8FAFF;
     }
 </style>
@@ -103,19 +98,19 @@ with st.container():
         if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
             selected_buildings.append(bu)
             
-    # (3) 대관 유형 (한 줄 배치를 위해 간격 최적화)
-    st.markdown("<hr>", unsafe_allow_html=True)
+    # (3) 대관 유형 (라인 제거 및 여백 축소)
+    st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
     st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
     
-    # 모바일 한 줄 표출을 위한 컬럼 분할 (간격 최소화)
-    t_col1, t_col2 = st.columns([1, 1])
+    # 간격을 좁힌 2개 컬럼으로 배치
+    t_col1, t_col2 = st.columns(2)
     with t_col1:
         show_today = st.checkbox("당일 대관", value=True)
     with t_col2:
         show_period = st.checkbox("기간 대관", value=False)
     
     # (4) 검색 버튼
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 수집 함수
@@ -150,7 +145,7 @@ if search_clicked:
             bu_df = df[df['buNm'].str.contains(bu, na=False)].copy()
 
         if bu_df.empty:
-            st.markdown('<div style="color:#888; font-size:15px; padding:5px 0;">ℹ️ 대관 내역 없음</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#888; font-size:15px; padding:3px 0;">ℹ️ 대관 내역 없음</div>', unsafe_allow_html=True)
         else:
             def sort_priority(x):
                 if not x: return 2
