@@ -6,23 +6,28 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 인위적 겹침 없이 여백만 절반으로 최적화
+# CSS: Streamlit 기본 간격(Gap)을 강제로 제어하여 여백 축소
 st.markdown("""
 <style>
-    /* 전체 레이아웃: 좌우 여백 확보 */
+    /* 전체 레이아웃 */
     .block-container { 
         padding: 1rem 1.2rem !important; 
         max-width: 500px !important; 
     }
     #MainMenu, header { visibility: hidden; }
     
+    /* [핵심] Streamlit 위젯 사이의 기본 간격(1rem -> 0.5rem)을 절반으로 줄임 */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.5rem !important;
+    }
+
     /* 메인 타이틀 */
     .main-title {
         font-size: 24px !important;
         font-weight: 800;
         text-align: center;
         color: #1E3A5F;
-        margin-bottom: 15px !important;
+        margin-bottom: 5px !important;
     }
 
     /* 소제목 */
@@ -30,24 +35,24 @@ st.markdown("""
         font-size: 18px !important;
         font-weight: 800;
         color: #2E5077;
-        margin-top: 12px !important;
+        margin-top: 5px !important;
         display: block;
     }
 
-    /* 체크박스: 폰트 확대 유지 */
+    /* 체크박스 설정 */
     .stCheckbox label p { 
         font-size: 18px !important; 
         font-weight: 500 !important;
     }
     
-    /* [수정] 건물명 헤더: 이전(25px)의 절반 수준인 12px로 여백 조정 */
+    /* [수정] 건물명 헤더: 자연스러운 개행 상태에서 여백을 시각적으로 절반 축소 */
     .building-header { 
         font-size: 20px !important; 
         font-weight: bold; 
         color: #2E5077; 
-        margin-top: 12px !important; 
+        margin-top: 15px !important; 
         border-bottom: 2px solid #2E5077; 
-        padding-bottom: 5px;
+        padding-bottom: 3px;
     }
 
     /* 결과 타이틀 박스 */
@@ -55,9 +60,9 @@ st.markdown("""
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
         border-radius: 10px;
-        padding: 12px !important;
+        padding: 10px !important;
         text-align: center;
-        margin: 15px 0 !important;
+        margin: 10px 0 !important;
     }
     .result-title-text {
         font-size: 20px !important;
@@ -65,13 +70,13 @@ st.markdown("""
         color: #1E3A5F;
     }
 
-    /* 결과 카드: 시인성 확보 */
+    /* 결과 카드 */
     .event-card { 
         border: 1px solid #E0E0E0; 
         border-left: 6px solid #2E5077; 
         padding: 10px 15px; 
         border-radius: 8px; 
-        margin-top: 8px !important;
+        margin-top: 5px !important;
         background-color: #ffffff;
     }
     .card-place { font-size: 18px !important; font-weight: 700; }
@@ -90,13 +95,12 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_B = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_buildings = []
 for b in ALL_B:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v32_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v33_{b}"):
         selected_buildings.append(b)
 
-# 대관 유형: 두 줄 배치 유지
 st.markdown('<span class="sub-label">🗓️ 대관 유형</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_32")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_32")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_33")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_33")
 
 st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
@@ -130,12 +134,11 @@ if search_clicked:
     """, unsafe_allow_html=True)
 
     for bu in selected_buildings:
-        # 건물명 사이 간격을 이전 버전의 절반으로 줄여 자연스럽게 배치
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
         bu_df = df[df['buNm'].str.contains(bu, na=False)].copy() if not df.empty else pd.DataFrame()
         
         if bu_df.empty:
-            st.markdown('<div style="color:#888; font-size:16px; padding:8px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#888; font-size:16px; padding:5px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
         else:
             bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
             bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
