@@ -7,10 +7,9 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 수정
+# CSS 스타일 수정 (우측 하단 플로팅 버튼 적용)
 st.markdown("""
 <style>
-    /* 상단 앵커 위치 조절 */
     #top-anchor { position: absolute; top: 0; left: 0; }
 
     .block-container { 
@@ -83,30 +82,30 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* TOP 버튼 중앙 정렬 및 링크 스타일 */
+    /* 우측 하단 플로팅 TOP 버튼 */
     .top-link-container {
         position: fixed;
-        bottom: 20px;
-        left: 0;
-        right: 0;
-        text-align: center;
+        bottom: 25px;
+        right: 20px;
         z-index: 999;
     }
     .top-link {
-        display: inline-block;
+        display: block;
         background-color: #1E3A5F;
         color: white !important;
-        padding: 10px 25px;
-        border-radius: 30px;
-        font-size: 14px;
+        width: 45px;
+        height: 45px;
+        line-height: 45px;
+        text-align: center;
+        border-radius: 50%;
+        font-size: 12px;
         font-weight: bold;
         text-decoration: none !important;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 2px 4px 8px rgba(0,0,0,0.3);
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 최상단 앵커 태그
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 
 # 2. 메인 UI
@@ -208,10 +207,10 @@ if search_clicked:
                         </div>
                         """, unsafe_allow_html=True)
         
-        # 최하단에 TOP 링크 배치 (항상 중앙 고정)
+        # 우측 하단 플로팅 TOP 버튼 (검색 결과가 있을 때만 표시)
         st.markdown("""
             <div class="top-link-container">
-                <a href="#top-anchor" class="top-link">TOP ▲</a>
+                <a href="#top-anchor" class="top-link">TOP</a>
             </div>
         """, unsafe_allow_html=True)
     else:
