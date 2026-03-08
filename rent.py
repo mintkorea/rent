@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: TOP 버튼 스타일 및 기존 레이아웃 유지
+# CSS: TOP 버튼 스타일 및 레이아웃
 st.markdown("""
 <style>
     .block-container { 
@@ -15,9 +15,8 @@ st.markdown("""
         max-width: 500px !important; 
     }
     #MainMenu, header { visibility: hidden; }
-    
-    [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 
+    /* 메인 타이틀 */
     .main-title {
         font-size: 24px !important;
         font-weight: 800;
@@ -26,72 +25,61 @@ st.markdown("""
         margin-bottom: 5px !important; 
     }
 
+    /* 검색 버튼 아래 여백 */
     div.stButton { margin-bottom: 35px !important; }
 
+    /* 결과 타이틀 */
     .date-display { 
         text-align: center; font-size: 19px; font-weight: 800; 
         background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
         margin-bottom: 20px; color: #1E3A5F;
     }
 
-    /* [추가] 플로팅 TOP 버튼 스타일 */
+    /* 플로팅 TOP 버튼 (강제 노출 설정 포함) */
     #scrollToTopBtn {
         position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 99;
+        bottom: 40px;
+        right: 20px;
+        z-index: 999999;
         border: none;
-        outline: none;
         background-color: #1E3A5F;
         color: white;
-        cursor: pointer;
-        padding: 15px;
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: bold;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-        display: none; /* 처음엔 숨김 */
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
     }
-    #scrollToTopBtn:hover { background-color: #2E5077; }
+    #scrollToTopBtn:hover { background-color: #FF4B4B; }
 
-    /* 카드 및 헤더 스타일 (기존 유지) */
+    /* 카드/헤더 디자인 유지 */
     .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 16px; font-weight: bold; color: #555; margin: 15px 0 8px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 15px; border-radius: 5px; margin-bottom: 12px !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; }
-    .today-card { background-color: #F8FAFF; } 
-    .place-time { font-size: 16px; font-weight: bold; color: #1E3A5F; }
-    .time-highlight { color: #FF4B4B; margin-left: 8px; }
-    .event-name { font-size: 14px; margin-top: 6px; color: #333; font-weight: 500; }
-    .bottom-info { font-size: 12px; color: #666; margin-top: 6px; }
-    .period-label { color: #d63384; font-weight: bold; }
-    .dept-label { margin-left: 10px; padding-left: 10px; border-left: 1px solid #ddd; }
     .status-badge { display: inline-block; padding: 2px 10px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
+    .place-time { font-size: 16px; font-weight: bold; color: #1E3A5F; }
+    .time-highlight { color: #FF4B4B; margin-left: 8px; }
 </style>
-
-<button onclick="topFunction()" id="scrollToTopBtn" title="Go to top">TOP</button>
-
-<script>
-    var mybutton = window.parent.document.getElementById("scrollToTopBtn");
-    
-    window.parent.onscroll = function() {scrollFunction()};
-
-    function scrollFunction() {
-        if (window.parent.pageYOffset > 300) {
-            mybutton.style.display = "block";
-        } else {
-            mybutton.style.display = "none";
-        }
-    }
-
-    function topFunction() {
-        window.parent.scrollTo({top: 0, behavior: 'smooth'});
-    }
-</script>
 """, unsafe_allow_html=True)
 
-# 2. 메인 UI (필터 영역)
+# TOP 버튼 HTML (아이콘 추가)
+st.markdown("""
+    <button id="scrollToTopBtn" onclick="window.parent.window.scrollTo({top: 0, behavior: 'smooth'});">
+        <span style="font-size:18px;">▲</span>
+        <span>TOP</span>
+    </button>
+""", unsafe_allow_html=True)
+
+# 2. 메인 UI
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span style="font-size:18px; font-weight:800; color:#2E5077;">📅 날짜 선택</span>', unsafe_allow_html=True)
@@ -100,18 +88,21 @@ target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility=
 st.markdown('<span style="font-size:18px; font-weight:800; color:#2E5077;">🏢 건물 선택</span>', unsafe_allow_html=True)
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
-for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v49_{b}"):
-        selected_bu.append(b)
+cols = st.columns(2) # 체크박스를 2열로 배치하여 공간 절약
+for i, b in enumerate(ALL_BUILDINGS):
+    with cols[i % 2]:
+        if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v50_{b}"):
+            selected_bu.append(b)
 
 st.markdown('<span style="font-size:18px; font-weight:800; color:#2E5077;">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_49")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_49")
+col_t, col_p = st.columns(2)
+with col_t: show_today = st.checkbox("당일 대관", value=True)
+with col_p: show_period = st.checkbox("기간 대관", value=True)
 
 st.write(" ")
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
-# 3. 데이터 로직 (생략 - 이전과 동일)
+# 3. 데이터 로직 (생략 - 기존과 동일)
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -121,15 +112,14 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 출력 및 자동 스크롤
+# 4. 결과 출력
 if search_clicked:
     st.markdown('<div id="result-section"></div>', unsafe_allow_html=True)
-    
     df_raw = get_data(target_date)
     formatted_date = target_date.strftime("%Y.%m.%d")
     st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({formatted_date})</div>', unsafe_allow_html=True)
 
-    # 검색 시 결과 위치로 부드럽게 스크롤
+    # 결과 스크롤 이동
     components.html(f"""<script>window.parent.document.getElementById("result-section").scrollIntoView({{behavior: "smooth", block: "start"}});</script>""", height=0)
 
     if not df_raw.empty:
