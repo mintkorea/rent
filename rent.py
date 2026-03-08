@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 극한의 압축 및 가로 배치 강제 설정
+# CSS: 타이틀 하단 여백 확보 및 모바일 최적화
 st.markdown("""
 <style>
     /* 전체 여백 및 폭 최적화 */
@@ -16,16 +16,17 @@ st.markdown("""
     }
     #MainMenu, header { visibility: hidden; }
 
-    /* 전체 폰트 크기 살짝 축소 (한 페이지 구현용) */
+    /* 전체 폰트 크기 */
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 메인 타이틀 압축 */
+    /* [수정] 메인 타이틀: 아래 여백을 기존보다 넓게(20px) 설정 */
     .main-title { 
-        font-size: 21px !important; 
+        font-size: 22px !important; 
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        margin-bottom: 0px !important; 
+        margin-bottom: 20px !important; 
+        padding-top: 5px;
     }
     
     /* 부제목: 마진 제거 수준으로 압축 */
@@ -49,7 +50,7 @@ st.markdown("""
         line-height: 1.3 !important;
     }
 
-    /* [중요] 대관 유형 가로 강제 배치 */
+    /* 대관 유형 가로 강제 배치 (Flex) */
     div[data-testid="stHorizontalBlock"] {
         display: flex !important;
         flex-direction: row !important;
@@ -61,12 +62,7 @@ st.markdown("""
         min-width: auto !important;
     }
 
-    /* 버튼 마진 축소 */
-    .stButton button {
-        margin-top: -10px !important;
-    }
-
-    /* 결과 카드 */
+    /* 검색 결과 카드 */
     .building-header { 
         font-size: 19px !important; 
         font-weight: bold; 
@@ -105,16 +101,16 @@ for bu in ALL_BUILDINGS:
     if st.checkbox(bu, value=is_default, key=f"bu_{bu}"):
         selected_buildings.append(bu)
         
-# (3) 대관 유형: Flexbox 강제 적용을 위해 한 줄로 묶음
+# (3) 대관 유형
 st.markdown('<span class="sub-header">🗓️ 대관 유형</span>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns([1, 1, 0.1]) # 아주 좁은 컬럼으로 쪼개서 붙임
+c1, c2, c3 = st.columns([1, 1, 0.1])
 with c1:
     show_today = st.checkbox("당일 대관", value=True)
 with c2:
     show_period = st.checkbox("기간 대관", value=False)
 
 # (4) 검색 버튼
-st.write("") # 미세 간격
+st.write("") 
 search_clicked = st.button("🔍 검색하기", use_container_width=True)
 
 # 3. 데이터 수집 함수
@@ -149,7 +145,6 @@ if search_clicked:
         if bu_df.empty:
             st.markdown('<div style="color:#888; font-size:14px; padding:2px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
         else:
-            # 정렬
             bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
             bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
             
