@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 수정 (우측 하단 플로팅 버튼 적용)
+# CSS 스타일 수정 (카드 내 행간 축소)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -58,21 +58,23 @@ st.markdown("""
         margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
+    /* 카드 설정 및 행간(line-height) 축소 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 12px; border-radius: 5px; 
+        padding: 10px 12px; border-radius: 5px; 
         margin-bottom: 10px !important; 
         box-shadow: 2px 2px 5px rgba(0,0,0,0.05); 
         background-color: #ffffff;
+        line-height: 1.3 !important; /* 행간 대폭 축소 */
     }
     .today-card { background-color: #F8FAFF; } 
     
     .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
-    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
-    .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
+    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 1px; }
+    .event-name { font-size: 14px; margin-top: 3px; color: #333; font-weight: 500; }
     
     .bottom-info { 
-        font-size: 12px; color: #666; margin-top: 6px; 
+        font-size: 12px; color: #666; margin-top: 4px; 
         display: flex; justify-content: space-between; align-items: flex-end;
     }
     .dept-label { text-align: right; flex-grow: 1; }
@@ -82,7 +84,6 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* 우측 하단 플로팅 TOP 버튼 */
     .top-link-container {
         position: fixed;
         bottom: 25px;
@@ -186,7 +187,7 @@ if search_clicked:
                             <span class="dept-label">👥 {row['mgDeptNm']}</span>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """, unsafe_allow_True=True)
             
             if show_period and not period_ev.empty:
                 valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
@@ -207,7 +208,6 @@ if search_clicked:
                         </div>
                         """, unsafe_allow_html=True)
         
-        # 우측 하단 플로팅 TOP 버튼 (검색 결과가 있을 때만 표시)
         st.markdown("""
             <div class="top-link-container">
                 <a href="#top-anchor" class="top-link">TOP</a>
