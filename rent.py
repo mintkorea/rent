@@ -7,7 +7,141 @@ from datetime import datetime, date
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 # CSS 스타일 (줄간격 최소화 + 자바스크립트 없는 자동 스크롤)import streamlit as st
+import requestsimport streamlit as st
 import requests
+import pandas as pd
+from datetime import datetime, date
+
+# 1. 페이지 설정
+st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
+
+# CSS 스타일 (자바스크립트 0%, 줄간격 초밀착)
+st.markdown("""
+<style>
+    /* 전체 여백 최소화 */
+    .block-container { padding: 0.2rem 0.8rem !important; max-width: 450px !important; }
+    header { visibility: hidden; }
+    
+    /* 요소 간격 박멸 */
+    [data-testid="stVerticalBlock"] { gap: 0rem !important; }
+    div[data-testid="stMarkdownContainer"] p { margin-bottom: 0px !important; line-height: 1.2; }
+    
+    .main-title { font-size: 19px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 8px !important; }
+    .sub-label { font-size: 14px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; }
+    
+    /* 결과 상단 날짜 박스 */
+    .date-display { 
+        text-align: center; font-size: 16px; font-weight: 800; 
+        background-color: #F0F2F6; padding: 4px; border-radius: 6px; 
+        margin: 5px 0; color: #1E3A5F;
+    }
+    
+    /* 요일 색상 */
+    .sat-text { color: #0000FF !important; } 
+    .sun-text { color: #FF0000 !important; }
+
+    .building-header { font-size: 15px !important; font-weight: bold; color: #2E5077; margin-top: 6px; border-bottom: 1.5px solid #2E5077; padding-bottom: 1px; margin-bottom: 3px; }
+    
+    /* 대관 카드 (줄간격 초밀착) */
+    .event-card { 
+        border: 1px solid #E0E0E0; border-left: 4px solid #2E5077; 
+        padding: 3px 6px; border-radius: 4px; margin-bottom: 3px !important; 
+        background-color: #ffffff; line-height: 1.0 !important;
+    }
+    .place-name { font-size: 13px; font-weight: bold; color: #1E3A5F; }
+    .time-row { font-size: 12px; font-weight: bold; color: #FF4B4B; }
+    .event-name { font-size: 12px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bottom-info { font-size: 10px; color: #777; display: flex; justify-content: space-between; margin-top: 1px; }
+    
+    .status-badge { padding: 0px 3px; font-size: 9px; border-radius: 3px; font-weight: bold; float: right; }
+    .status-y { background-color: #FFF4E5; color: #B25E09; } 
+    .status-n { background-color: #E8F0FE; color: #1967D2; }
+</style>
+""", unsafe_allow_html=True)
+
+# 2. 메인 UI (컴팩트 배치)
+st.markdown('<div class="main-title">🏫 성의교정 대관 현황</div>', unsafe_allow_html=True)
+
+# 폼(Form)을 사용하여 조회 버튼 클릭 시 페이지가 새로고침되며 결과가 바로 보이게 함
+with st.form("search_form"):
+    st.markdown('<span class="sub-label">📅 날짜</span>', unsafe_allow_html=True)
+    target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility="collapsed")
+
+    st.markdown('<span class="sub-label">🏢 건물</span>', unsafe_allow_html=True)
+    ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+    
+    # 체크박스 2열 배치로 높이 절약
+    cb_cols = st.columns(2)
+    selected_bu = []
+    for i, b in enumerate(ALL_BUILDINGS):
+        with cb_cols[i % 2]:
+            if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"])):
+                selected_bu.append(b)
+
+    st.markdown('<span class="sub-label">🗓️ 유형</span>', unsafe_allow_html=True)
+    ty_cols = st.columns(2)
+    with ty_cols[0]: show_today = st.checkbox("당일", value=True)
+    with ty_cols[1]: show_period = st.checkbox("기간", value=True)
+    
+    search_clicked = st.form_submit_button("🔍 조회하기", use_container_width=True)
+
+# 3. 데이터 로직 (캐싱 적용)
+@st.cache_data(ttl=300)
+def get_data(selected_date):
+    url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
+    params = {"mode": "getReservedData", "start": selected_date.strftime('%Y-%m-%d'), "end": selected_date.strftime('%Y-%m-%d')}
+    try:
+        res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
+        return pd.DataFrame(res.json().get('res', []))
+    except: return pd.DataFrame()
+
+# 4. 결과 출력
+if search_clicked:
+    df_raw = get_data(target_date)
+    w_idx = target_date.weekday()
+    w_str = ["월","화","수","목","금","토","일"][w_idx]
+    w_class = "sat-text" if w_idx == 5 else ("sun-text" if w_idx == 6 else "")
+    
+    st.markdown(f"""
+        <div class="date-display">
+            {target_date.strftime("%Y.%m.%d")}<span class="{w_class}">({w_str})</span> 조회 결과
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not df_raw.empty:
+        target_weekday = str(w_idx + 1)
+        for bu in selected_bu:
+            bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)].copy()
+            if bu_df.empty: continue
+            
+            st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+            
+            for _, row in bu_df.iterrows():
+                is_today = (row['startDt'] == row['endDt'])
+                is_period = (row['startDt'] != row['endDt'])
+                
+                show = False
+                if is_today and show_today: show = True
+                elif is_period and show_period:
+                    if target_weekday in [d.strip() for d in str(row.get('allowDay','')).split(",")]:
+                        show = True
+                
+                if show:
+                    s_cls, s_txt = (("status-y", "확정") if row.get('status') == 'Y' else ("status-n", "대기"))
+                    st.markdown(f"""
+                    <div class="event-card">
+                        <span class="status-badge {s_cls}">{s_txt}</span>
+                        <div class="place-name">📍 {row['placeNm']}</div>
+                        <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                        <div class="event-name">📄 {row['eventNm']}</div>
+                        <div class="bottom-info">
+                            <span>🗓️ {row['startDt']}</span>
+                            <span>👥 {row['mgDeptNm']}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+    else:
+        st.info("조회 내역이 없습니다.")
 import pandas as pd
 from datetime import datetime, date
 
@@ -433,5 +567,6 @@ if search_clicked:
         st.markdown('<div class="top-link-container"><a href="#top-anchor" class="top-link">TOP</a></div>', unsafe_allow_html=True)
     else:
         st.info("조회된 내역이 없습니다.")
+
 
 
