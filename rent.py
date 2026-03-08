@@ -16,13 +16,14 @@ st.markdown("""
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
     div.stButton { margin-bottom: 35px !important; }
+    
     .date-display { 
         text-align: center; font-size: 19px; font-weight: 800; 
         background-color: #F0F2F6; padding: 12px; border-radius: 10px; 
         margin-bottom: 20px; color: #1E3A5F;
     }
-    .sat { color: #007bff; } /* 토요일 청색 */
-    .sun { color: #ff4b4b; } /* 일요일/공휴일 적색 */
+    .sat { color: #007bff; font-weight: bold; } 
+    .sun { color: #ff4b4b; font-weight: bold; } 
     
     .sub-label { font-size: 18px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; display: block; }
     .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
@@ -30,18 +31,20 @@ st.markdown("""
     
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 8px 12px; border-radius: 5px; margin-bottom: 10px !important; 
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.2 !important; 
+        padding: 10px 12px; border-radius: 5px; margin-bottom: 10px !important; 
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.3 !important; 
     }
     .today-card { background-color: #F8FAFF; } 
     .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
     .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
     .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
-    .shift-label { color: #1E3A5F; font-weight: bold; margin-left: 5px; } /* 근무조 스타일 */
-    
-    .bottom-info { font-size: 12px; color: #666; margin-top: 5px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .dept-label { text-align: right; flex-grow: 1; }
-    .period-label { color: #d63384; font-weight: bold; white-space: nowrap; }
+    .shift-label { color: #E67E22; font-weight: 800; margin-left: 5px; } 
+
+    /* 하단 정보 개행 구조 */
+    .bottom-info { font-size: 12px; color: #666; margin-top: 8px; border-top: 1px dotted #eee; padding-top: 6px; }
+    .dept-label { display: block; text-align: right; margin-top: 2px; }
+    .period-label { display: block; color: #d63384; font-weight: bold; }
+
     .status-badge { display: inline-block; padding: 1px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
@@ -51,9 +54,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 요일 및 색상 변환 함수
-def get_day_format(dt_str):
-    dt = datetime.strptime(dt_str.replace(".", "-"), "%Y-%m-%d")
+# 1. 근무조 계산 함수 (3월 1일 A조 기준)
+def get_work_shift(target_dt):
+    base_date = date(2026, 3, 1)
+    diff_days = (target_dt - base_date).days
+    shifts = ["A조", "B조", "C조"]
+    return shifts[diff_days % 3]
+
+# 2. 요일 형식화 함수
+def get_day_format(dt_input):
+    if isinstance(dt_input, str):
+        dt = datetime.strptime(dt_input.replace(".", "-"), "%Y-%m-%d").date()
+    else:
+        dt = dt_input
     days = ["(월)", "(화)", "(수)", "(목)", "(금)", "(토)", "(일)"]
     day_name = days[dt.weekday()]
     if dt.weekday() == 5: return f'<span class="sat">{day_name}</span>'
@@ -88,12 +101,11 @@ def get_data(selected_date):
 if search_clicked:
     df_raw = get_data(target_date)
     target_weekday = str(target_date.weekday() + 1)
+    current_shift = get_work_shift(target_date) # 현재 날짜 근무조 계산
     
     f_date = target_date.strftime("%Y.%m.%d")
-    day_html = get_day_format(f_date)
+    day_html = get_day_format(target_date)
     st.markdown(f'<div class="date-display">📋 성의교정 대관 현황({f_date} {day_html})</div>', unsafe_allow_html=True)
-
-    components.html("""<script>var element = window.parent.document.getElementById("btn-anchor"); if (element) { element.scrollIntoView({behavior: "smooth", block: "start"}); }</script>""", height=0)
 
     if not df_raw.empty:
         for bu in selected_bu:
@@ -110,13 +122,12 @@ if search_clicked:
                 st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                 for _, row in today_ev.iterrows():
                     s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                    shift_info = f"<span class='shift-label'>({row['workShift']})</span>" if row.get('workShift') else ""
                     st.markdown(f"""
                     <div class="event-card today-card">
                         <span class="status-badge {s_cls}">{s_txt}</span>
                         <div class="place-name">📍 {row['placeNm']}</div>
                         <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                        <div class="event-name">📄 {row['eventNm']} {shift_info}</div>
+                        <div class="event-name">📄 {row['eventNm']} <span class='shift-label'>({current_shift})</span></div>
                         <div class="bottom-info">
                             <span class="period-label">🗓️ {row['startDt']} {get_day_format(row['startDt'])}</span>
                             <span class="dept-label">👥 {row['mgDeptNm']}</span>
@@ -129,13 +140,12 @@ if search_clicked:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, row in valid_period_ev.iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                        shift_info = f"<span class='shift-label'>({row['workShift']})</span>" if row.get('workShift') else ""
                         st.markdown(f"""
                         <div class="event-card">
                             <span class="status-badge {s_cls}">{s_txt}</span>
                             <div class="place-name">📍 {row['placeNm']}</div>
                             <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                            <div class="event-name">📄 {row['eventNm']} {shift_info}</div>
+                            <div class="event-name">📄 {row['eventNm']} <span class='shift-label'>({current_shift})</span></div>
                             <div class="bottom-info">
                                 <span class="period-label">🗓️ {row['startDt']}{get_day_format(row['startDt'])} ~ {row['endDt']}{get_day_format(row['endDt'])}</span>
                                 <span class="dept-label">👥 {row['mgDeptNm']}</span>
