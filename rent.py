@@ -6,7 +6,7 @@ from datetime import datetime, date
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS: 박스 디자인 통일 및 일체화
+# CSS: 박스 내부 간격 및 타이틀 일체화 (최적화 버전)
 st.markdown("""
 <style>
     .block-container { 
@@ -16,38 +16,29 @@ st.markdown("""
     #MainMenu, header { visibility: hidden; }
     html, body, [class*="st-"] { font-size: 15.5px !important; }
 
-    /* 배경 박스: 타이틀과 내용을 하나로 묶는 스타일 */
+    /* [중요] 배경 박스: 타이틀과 내용을 하나로 묶음 */
     .filter-container {
         background-color: #f8f9fa;
-        padding: 12px;
+        padding: 8px 12px 12px 12px; /* 위쪽 패딩을 줄여 타이틀 밀착 */
         border-radius: 10px;
         border: 1px solid #e9ecef;
         margin-bottom: 15px;
     }
 
-    /* 박스 내부 타이틀 스타일 */
-    .inner-title { 
-        font-size: 22px !important; 
+    /* 박스 내부 타이틀 (메인 및 결과 공통) */
+    .box-inner-title { 
+        font-size: 21px !important; 
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
         margin: 0 !important; 
-        padding-bottom: 10px;
-    }
-    
-    /* 결과 박스 전용 타이틀 스타일 */
-    .result-title {
-        font-size: 22px !important;
-        font-weight: 800;
-        text-align: center;
-        color: #1E3A5F;
-        margin: 0 !important;
-        padding: 5px 0;
+        padding: 5px 0 10px 0 !important; /* 위아래 여백 최소화 */
+        line-height: 1.2;
     }
 
     /* 부제목 */
     .sub-header {
-        font-size: 17px !important;
+        font-size: 16.5px !important;
         font-weight: 800 !important;
         color: #2E5077;
         margin-top: 5px !important;
@@ -66,10 +57,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 메인 필터 영역 (타이틀을 박스 내부 최상단에 배치)
+# 2. 검색 필터 영역 (메인 타이틀을 이 박스 안의 첫 번째 요소로 삽입)
 with st.container():
     st.markdown('<div class="filter-container">', unsafe_allow_html=True)
-    st.markdown('<div class="inner-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
+    # [박스 안으로 직접 삽입]
+    st.markdown('<div class="box-inner-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
     
     st.markdown('<span class="sub-header">📅 날짜 선택</span>', unsafe_allow_html=True)
     target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility="collapsed")
@@ -90,7 +82,7 @@ with st.container():
     search_clicked = st.button("🔍 검색하기", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 3. 데이터 수집
+# 3. 데이터 수집 함수 (기존과 동일)
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -98,8 +90,7 @@ def get_data(selected_date):
     try:
         res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
         return pd.DataFrame(res.json().get('res', []))
-    except:
-        return pd.DataFrame()
+    except: return pd.DataFrame()
 
 # 4. 결과 출력
 if search_clicked:
@@ -111,18 +102,21 @@ if search_clicked:
         temp_df['endDt_dt'] = pd.to_datetime(temp_df['endDt']).dt.date
         df = temp_df[(temp_df['startDt_dt'] <= target_date) & (temp_df['endDt_dt'] >= target_date)]
 
-    # 결과 타이틀 박스 (박스 안에 타이틀이 들어간 일체형 구조)
+    # 결과 타이틀 위 빈 라인
     st.write("") 
+    
+    # [수정] 결과 타이틀 박스 크기 축소 및 일체화
     formatted_date = target_date.strftime('%m/%d')
     st.markdown(f"""
-    <div class="filter-container">
-        <div class="result-title">🏢 성의교정 대관 현황({formatted_date})</div>
+    <div class="filter-container" style="padding: 8px !important; margin-bottom: 10px;">
+        <div class="box-inner-title" style="padding: 2px 0 !important; font-size: 19px !important;">
+            🏢 성의교정 대관 현황({formatted_date})
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 개별 결과 (기존 동일)
     for bu in selected_buildings:
-        st.markdown(f'<div style="font-size:19px; font-weight:bold; color:#2E5077; margin-top:15px; border-bottom:2px solid #2E5077;">🏢 {bu}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:18px; font-weight:bold; color:#2E5077; margin-top:12px; border-bottom:2px solid #2E5077;">🏢 {bu}</div>', unsafe_allow_html=True)
         bu_df = df[df['buNm'].str.contains(bu, na=False)].copy() if not df.empty else pd.DataFrame()
         if bu_df.empty:
             st.markdown('<div style="color:#888; font-size:14px; padding:2px 0;">ℹ️ 내역 없음</div>', unsafe_allow_html=True)
