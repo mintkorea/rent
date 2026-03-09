@@ -122,7 +122,8 @@ st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
-target_date = st.date_input("날짜", value=date(2026, 3, 12), label_visibility="collapsed")
+# 수정 3: 기본 날짜를 Today로 설정
+target_date = st.date_input("날짜", value=date.today(), label_visibility="collapsed")
 
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
@@ -167,7 +168,6 @@ if search_clicked:
     
     formatted_date = target_date.strftime("%Y.%m.%d")
     
-    # 근무조(groupNm) 부분만 제거한 타이틀
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
@@ -189,39 +189,44 @@ if search_clicked:
         height=0,
     )
 
+    found_any = False
     if not df_raw.empty:
         target_weekday = str(target_date.weekday() + 1)
         for bu in selected_bu:
             bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)].copy()
             if bu_df.empty: continue
             
-            st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-            bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
-            bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
-            
+            # 실제 대관 내역 존재 여부 확인을 위한 필터링
             today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
             period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
+            valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
             
-            if show_today and not today_ev.empty:
-                st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
-                for _, row in today_ev.iterrows():
-                    s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                    st.markdown(f"""
-                    <div class="event-card today-card">
-                        <span class="status-badge {s_cls}">{s_txt}</span>
-                        <div class="place-name">📍 {row['placeNm']}</div>
-                        <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                        <div class="event-name">📄 {row['eventNm']}</div>
-                        <div class="bottom-info">
-                            <span class="period-label">🗓️ {row['startDt']}</span>
-                            <span class="dept-label">👥 {row['mgDeptNm']}</span>
+            # 표시할 내역이 하나라도 있는 경우에만 건물 헤더 출력
+            if (show_today and not today_ev.empty) or (show_period and not valid_period_ev.empty):
+                found_any = True
+                st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+                
+                bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
+                bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
+                
+                if show_today and not today_ev.empty:
+                    st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
+                    for _, row in today_ev.iterrows():
+                        s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
+                        st.markdown(f"""
+                        <div class="event-card today-card">
+                            <span class="status-badge {s_cls}">{s_txt}</span>
+                            <div class="place-name">📍 {row['placeNm']}</div>
+                            <div class="time-row">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                            <div class="event-name">📄 {row['eventNm']}</div>
+                            <div class="bottom-info">
+                                <span class="period-label">🗓️ {row['startDt']}</span>
+                                <span class="dept-label">👥 {row['mgDeptNm']}</span>
+                            </div>
                         </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            if show_period and not period_ev.empty:
-                valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
-                if not valid_period_ev.empty:
+                        """, unsafe_allow_html=True)
+                
+                if show_period and not valid_period_ev.empty:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, row in valid_period_ev.iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
@@ -238,12 +243,15 @@ if search_clicked:
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-        
-        st.markdown("""
-            <div class="top-link-container">
-                <a href="#top-anchor" class="top-link">TOP</a>
-            </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
 
+    # 수정 1: 대관 내역이 없으면 메시지 표출
+    if not found_any:
+        st.info("대관 내역이 없습니다.")
+
+    # 수정 2: 마지막에 여백 2행 추가 및 TOP 버튼
+    st.write("\n\n") 
+    st.markdown("""
+        <div class="top-link-container">
+            <a href="#top-anchor" class="top-link">TOP</a>
+        </div>
+    """, unsafe_allow_html=True)
