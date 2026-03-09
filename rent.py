@@ -108,3 +108,4 @@ if st.session_state.search_active:
                         <div style="margin-top:6px;">📄 {row['title']}</div>
                     </div>
                     """, unsafe_allow_html=True)
+
