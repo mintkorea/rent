@@ -161,3 +161,4 @@ if st.session_state.search_performed:
 
     st.markdown('<div style="margin-bottom: 100px;"></div>', unsafe_allow_html=True)
     st.markdown("""<div class="top-link-container"><a href="#top-anchor" class="top-link">TOP</a></div>""", unsafe_allow_html=True)
+
