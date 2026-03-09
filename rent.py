@@ -246,3 +246,4 @@ if search_clicked:
         """, unsafe_allow_html=True)
     else:
         st.info("해당 날짜에 조회된 대관 내역이 없습니다.")
+
