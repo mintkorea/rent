@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import streamlit.components.v1 as components
 
 # 1. 페이지 설정 및 세션 초기화 (결과 유지 핵심)
@@ -15,8 +15,10 @@ if 'search_performed' not in st.session_state:
 # [화살표 로직] 날짜 이동 시에도 검색 상태 유지
 params = st.query_params
 if "nav" in params:
-    if params["nav"] == "prev": st.session_state.target_date -= timedelta(days=1)
-    if params["nav"] == "next": st.session_state.target_date += timedelta(days=1)
+    if params["nav"] == "prev":
+        st.session_state.target_date -= timedelta(days=1)
+    if params["nav"] == "next":
+        st.session_state.target_date += timedelta(days=1)
     st.session_state.search_performed = True 
     st.query_params.clear()
     st.rerun()
@@ -32,33 +34,15 @@ st.markdown("""
     /* 메인 타이틀 */
     .main-title { font-size: 26px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
     
-    /* [성공 소스] 통합 날짜 박스 및 화살표 밀착 */
+    /* 날짜 박스 및 화살표 밀착 */
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 20px 10px; 
         border-radius: 12px; margin-bottom: 20px; border: 1px solid #D1D9E6; 
     }
     .res-main-title { font-size: 24px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 8px; }
-    .date-row { display: flex; align-items: center; justify-content: center; gap: 15px; } /* 화살표-날짜 밀착 */
+    .date-row { display: flex; align-items: center; justify-content: center; gap: 15px; }
     .nav-arrow { font-size: 32px !important; font-weight: bold; color: #1E3A5F !important; text-decoration: none !important; line-height: 1; }
     .res-sub-title { font-size: 20px !important; font-weight: 700; color: #333; }
-    
-    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
-    .sub-label { font-size: 18px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; display: block; }
-    .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
-    .section-title { font-size: 16px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 8px 12px; border-radius: 5px; margin-bottom: 10px !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.2 !important; }
-    .today-card { background-color: #F8FAFF; } 
-    .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; }
-    .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
-    .event-name { font-size: 14px; margin-top: 4px; color: #333; font-weight: 500; }
-    .bottom-info { font-size: 12px; color: #666; margin-top: 5px; display: flex; justify-content: space-between; align-items: flex-end; }
-    .dept-label { text-align: right; flex-grow: 1; }
-    .period-label { color: #d63384; font-weight: bold; white-space: nowrap; }
-    .status-badge { display: inline-block; padding: 1px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
-    .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
-    .top-link-container { position: fixed; bottom: 25px; right: 20px; z-index: 999; }
-    .top-link { display: block; background-color: #1E3A5F; color: white !important; width: 45px; height: 45px; line-height: 45px; text-align: center; border-radius: 50%; font-size: 12px; font-weight: bold; text-decoration: none !important; box-shadow: 2px 4px 8px rgba(0,0,0,0.3); }
-    .no-data-text { color: #888; font-size: 14px; padding: 10px 5px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -96,7 +80,8 @@ def get_data(selected_date):
     try:
         res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
         return pd.DataFrame(res.json().get('res', []))
-    except: return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
 def get_weekday_names(allow_day_str):
     days = {"1":"월", "2":"화", "3":"수", "4":"목", "5":"금", "6":"토", "7":"일"}
@@ -115,7 +100,7 @@ if st.session_state.search_performed:
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     formatted_date = d.strftime("%Y.%m.%d")
     
-    # [성공 소스 결합] 박스 내 화살표 밀착 배치
+    # 날짜 박스 내 화살표 밀착 배치
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
