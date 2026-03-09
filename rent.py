@@ -11,7 +11,7 @@ if 'target_date' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# [핵심] 클릭하는 만큼 날짜가 계속 누적 변경되는 원본 로직
+# [성공 로직] 클릭하는 만큼 날짜가 계속 바뀌는 쿼리 파라미터 방식
 params = st.query_params
 if "nav" in params:
     if params["nav"] == "prev": 
@@ -22,76 +22,56 @@ if "nav" in params:
     st.query_params.clear()
     st.rerun()
 
-# 2. CSS 스타일 (화살표 박스 안착용 최적화)
+# 2. CSS 스타일 (화살표를 박스 안 날짜 양옆에 고정)
 st.markdown("""
 <style>
-    #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* [수정] 박스 내부 정렬용 */
+    /* 박스 전체 디자인 */
     .date-display-box { 
-        text-align: center; background-color: #F8FAFF; padding: 20px 10px; 
-        border-radius: 12px; margin-bottom: 20px; border: 1px solid #D1D9E6;
+        text-align: center; background-color: #F8FAFF; padding: 25px 10px; 
+        border-radius: 12px; border: 1px solid #D1D9E6; margin-bottom: 20px;
     }
     .res-main-title { font-size: 24px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 15px; }
     
-    /* [정렬 핵심] 화살표가 날짜와 한 줄에 나오도록 배치 */
+    /* [핵심] 화살표와 날짜를 박스 안에서 수평 정렬 */
     .date-nav-wrapper {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 25px; /* 화살표와 날짜 사이 간격 */
+        gap: 30px; /* 화살표와 날짜 사이 간격 */
     }
-    .nav-arrow { font-size: 28px !important; font-weight: bold; color: #1E3A5F !important; text-decoration: none !important; }
+    /* 성공했던 텍스트 링크형 화살표 디자인 */
+    .nav-arrow { 
+        font-size: 32px !important; 
+        font-weight: bold; 
+        color: #1E3A5F !important; 
+        text-decoration: none !important;
+        padding-bottom: 5px;
+    }
     .res-sub-title { font-size: 22px !important; font-weight: 700; color: #333; }
     
     .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
-    .sub-label { font-size: 18px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; display: block; }
-
-    /* 카드 관련은 기본 형태만 유지 */
-    .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-top: 15px; }
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 10px; border-radius: 5px; margin-bottom: 10px; background: #fff; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
-
-# 3. 입력부
-st.markdown('<div style="font-size: 26px; font-weight: 800; text-align: center; color: #1E3A5F;">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
-
-st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
+# 3. 입력부 (간결하게 유지)
+st.markdown('<h2 style="text-align:center; color:#1E3A5F;">🏫 성의교정 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
+selected_bu = [b for b in ["성의회관", "의생명산업연구원", "옴니버스 파크"] if st.checkbox(b, value=True)]
 
-st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
-selected_bu = [b for b in ["성의회관", "의생명산업연구원", "옴니버스 파크", "대학본관", "서울성모별관"] if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"c_{b}")]
-
-st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True)
-show_period = st.checkbox("기간 대관", value=True)
-
-if st.button("🔍 검색하기", use_container_width=True, type="primary"):
+if st.button("🔍 검색하기", use_container_width=True):
     st.session_state.search_performed = True
 
-# 4. 데이터 로직
-@st.cache_data(ttl=300)
-def get_data(selected_date):
-    url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
-    params = {"mode": "getReservedData", "start": selected_date.strftime('%Y-%m-%d'), "end": selected_date.strftime('%Y-%m-%d')}
-    try:
-        res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
-        return pd.DataFrame(res.json().get('res', []))
-    except: return pd.DataFrame()
-
-# 5. 결과 출력 (박스 내부 화살표 정렬 성공 버전)
+# 4. 결과 출력부 (화살표가 박스 안으로 들어온 버전)
 if st.session_state.search_performed:
-    df_raw = get_data(st.session_state.target_date)
     d = st.session_state.target_date
     w_idx = d.weekday()
     w_str = ["월", "화", "수", "목", "금", "토", "일"][w_idx]
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
 
-    # [수정] 화살표가 박스 안으로 완벽하게 들어가는 구조
+    # [수정된 부분] HTML 구조를 하나로 묶어 화살표를 박스 안으로 완벽 삽입
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
@@ -103,7 +83,5 @@ if st.session_state.search_performed:
     </div>
     """, unsafe_allow_html=True)
 
-    # 기본 출력 (나중에 사용자님 디자인으로 다시 덮어쓸 부분)
-    for bu in selected_bu:
-        st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-        # ... 이하 데이터 출력 로직 ...
+    # 데이터 출력 로직... (이하 생략)
+    st.write(f"현재 선택된 날짜: {d}")
