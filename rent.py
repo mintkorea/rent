@@ -16,73 +16,108 @@ def change_date(days):
     st.session_state.target_date += timedelta(days=days)
     st.session_state.search_performed = True
 
-# [유틸] allowDay 숫자 문자열을 "월,화" 형태 한글로 변환
+# [유틸] allowDay 숫자 -> 한글 요일 변환
 def get_weekday_names(allow_day_str):
     if not allow_day_str: return ""
     days_map = {"1": "월", "2": "화", "3": "수", "4": "목", "5": "금", "6": "토", "7": "일"}
-    # "1,2,3" 형태를 리스트로 변환 후 매핑
     day_list = [days_map.get(d.strip()) for d in allow_day_str.split(',') if d.strip() in days_map]
     return f"({','.join(day_list)})" if day_list else ""
 
-# 2. CSS (원본 카드 디자인 유지)
+# 2. CSS 스타일 (메인 레이아웃 + 카드 디자인 + 하단 여백)
 st.markdown("""
 <style>
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
-    div.stButton > button[kind="primary"] { background-color: #FF5252 !important; color: white !important; border-radius: 8px !important; height: 50px !important; font-weight: bold !important; }
-    .date-display-box { text-align: center; background-color: #F8FAFF; padding: 20px 10px; border-radius: 15px; border: 1px solid #E1E8F0; margin-top: 20px; }
+    
+    /* 메인 섹션 타이틀 & 아이콘 */
+    .main-label { font-size: 19px; font-weight: bold; color: #1E3A5F; margin: 15px 0 8px 0; display: flex; align-items: center; }
+    
+    /* 검색 버튼 (빨간색) */
+    div.stButton > button[kind="primary"] {
+        background-color: #FF5252 !important; color: white !important;
+        border-radius: 8px !important; height: 50px !important; font-weight: bold !important;
+        font-size: 18px !important;
+    }
+
+    /* 날짜 박스 */
+    .date-display-box { 
+        text-align: center; background-color: #F8FAFF; padding: 20px 10px; 
+        border-radius: 15px; border: 1px solid #E1E8F0; margin: 20px 0;
+    }
     .res-main-title { font-size: 24px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 15px; }
-    div.stButton > button:not([kind="primary"]) { background-color: #A3D2F3 !important; border: none !important; color: white !important; font-size: 20px !important; font-weight: bold !important; border-radius: 5px !important; width: 60px !important; height: 45px !important; }
-    .res-sub-title { font-size: 22px !important; font-weight: 700; color: #333; line-height: 45px; }
-    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
-    .building-header { font-size: 20px !important; font-weight: bold; color: #1E3A5F; border-bottom: 3px solid #1E3A5F; padding-bottom: 8px; margin-top: 30px; margin-bottom: 15px; }
-    .section-title { font-size: 18px; font-weight: bold; color: #444; margin: 20px 0 10px 0; }
-    .event-card { border: 1px solid #E8E8E8; border-left: 6px solid #1E3A5F; padding: 15px; border-radius: 10px; margin-bottom: 12px; background-color: white; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .status-badge { position: absolute; top: 15px; right: 15px; padding: 2px 12px; border-radius: 15px; font-size: 11px; font-weight: bold; }
-    .status-y { background-color: #FFF2E6; color: #FF8C00; } 
-    .status-w { background-color: #E6F2FF; color: #007AFF; }
-    .place-name { font-size: 18px; font-weight: 800; color: #1E3A5F; margin-bottom: 8px; }
-    .time-text { font-weight: bold; color: #E63946; }
+    
+    /* 결과 카드 디자인 (18:57 버전) */
+    .building-header { font-size: 20px !important; font-weight: bold; color: #1E3A5F; border-bottom: 2px solid #1E3A5F; padding-bottom: 8px; margin-top: 30px; margin-bottom: 15px; }
+    .section-title { font-size: 17px; font-weight: bold; color: #444; margin: 15px 0 8px 0; }
+    .event-card { border: 1px solid #E8E8E8; border-left: 5px solid #1E3A5F; padding: 12px; border-radius: 8px; margin-bottom: 12px; background-color: white; position: relative; }
+    
+    .status-badge { position: absolute; top: 12px; right: 12px; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .status-y { background-color: #FFF2E6; color: #FF8C00; } /* 예약확정 */
+    .status-w { background-color: #E6F2FF; color: #007AFF; } /* 신청대기 */
+
+    .place-name { font-size: 18px; font-weight: 800; color: #1E3A5F; margin-bottom: 5px; }
+    .time-text { font-weight: bold; color: #E63946; font-size: 16px; }
     .info-sub { font-size: 13px; color: #666; display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px solid #F0F0F0; padding-top: 8px; }
-    .top-floating { position: fixed; bottom: 30px; right: 20px; background-color: #1E3A5F; color: white !important; width: 50px; height: 50px; border-radius: 50%; text-align: center; line-height: 50px; font-weight: bold; z-index: 1000; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 14px; }
+
+    /* TOP 버튼 및 하단 여백 처리 */
+    .top-floating {
+        position: fixed; bottom: 25px; right: 20px; background-color: #1E3A5F;
+        color: white !important; width: 55px; height: 55px; border-radius: 50%;
+        text-align: center; line-height: 55px; font-weight: bold; z-index: 1000;
+        text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .footer-spacer { height: 100px; } /* TOP 버튼이 글자를 가리지 않게 하는 빈 공간 */
 </style>
 """, unsafe_allow_html=True)
 
+# 3. 메인 UI (18:57 스크린샷 기준 레이아웃)
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<h2 style="text-align:center; color:#1E3A5F;">🏢 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
+st.markdown('<h2 style="text-align:center; color:#1E3A5F;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 
-st.session_state.target_date = st.date_input("날짜 선택", value=st.session_state.target_date)
-selected_bu = [b for b in ["성의회관", "의생명산업연구원", "옴니버스 파크", "대학본관", "서울성모별관"] if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]))]
-show_today = st.checkbox("📌 당일 대관", value=True)
-show_period = st.checkbox("🗓️ 기간 대관", value=True)
+# 섹션: 날짜 선택
+st.markdown('<div class="main-label">📅 날짜 선택</div>', unsafe_allow_html=True)
+st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
+# 섹션: 건물 선택
+st.markdown('<div class="main-label">🏢 건물 선택</div>', unsafe_allow_html=True)
+ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+selected_bu = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"main_{b}")]
+
+# 섹션: 대관 유형
+st.markdown('<div class="main-label">🗓️ 대관 유형 선택</div>', unsafe_allow_html=True)
+show_today = st.checkbox("당일 대관", value=True)
+show_period = st.checkbox("기간 대관", value=True)
+
+st.write("")
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
     components.html("<script>window.parent.document.getElementById('result-start').scrollIntoView({behavior:'smooth'});</script>", height=0)
 
+# 4. 데이터 로직
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
     params = {"mode": "getReservedData", "start": selected_date.strftime('%Y-%m-%d'), "end": selected_date.strftime('%Y-%m-%d')}
     try:
         res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"})
-        return pd.DataFrame(res.json().get('res', []))
+        df = pd.DataFrame(res.json().get('res', []))
+        return df
     except: return pd.DataFrame()
 
+# 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-start"></div>', unsafe_allow_html=True)
     df_raw = get_data(st.session_state.target_date)
     
-    # KeyError 방지
-    required_cols = ['buNm', 'placeNm', 'startTime', 'endTime', 'eventNm', 'startDt', 'endDt', 'allowDay']
-    for col in required_cols:
-        if not df_raw.empty and col not in df_raw.columns: df_raw[col] = ""
+    # KeyError 방지용 컬럼 생성
+    for c in ['buNm', 'placeNm', 'startTime', 'endTime', 'eventNm', 'startDt', 'endDt', 'allowDay', 'statNm', 'mgDeptNm']:
+        if not df_raw.empty and c not in df_raw.columns: df_raw[c] = ""
 
     d = st.session_state.target_date
-    w_idx = d.weekday()
-    w_str = ["월", "화", "수", "목", "금", "토", "일"][w_idx]
-    w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
+    w_str = ["월", "화", "수", "목", "금", "토", "일"][d.weekday()]
+    w_class = "sat" if d.weekday() == 5 else ("sun" if d.weekday() == 6 else "")
 
+    # 결과 상단 날짜 박스
     st.markdown('<div class="date-display-box"><span class="res-main-title">성의교정 대관 현황</span>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 3, 1])
     with c1:
@@ -93,45 +128,52 @@ if st.session_state.search_performed:
         if st.button("➡️", key="n_btn"): change_date(1); st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    target_weekday = str(w_idx + 1)
+    target_weekday_num = str(d.weekday() + 1)
 
     for bu in selected_bu:
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-        has_bu_content = False
+        has_content = False
+        
         if not df_raw.empty:
-            bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)]
+            bu_df = df_raw[df_raw['buNm'].str.contains(bu.split(" ")[0], na=False)] # 건물명 매칭 강화
             
+            # 당일 대관
             if show_today:
                 t_df = bu_df[bu_df['startDt'] == bu_df['endDt']]
                 if not t_df.empty:
-                    has_bu_content = True
+                    has_content = True
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                     for _, r in t_df.iterrows():
+                        s_cls = "status-y" if r['statNm'] == "예약확정" else "status-w"
                         st.markdown(f"""
-                        <div class="event-card"><span class="status-badge status-y">예약확정</span>
+                        <div class="event-card"><span class="status-badge {s_cls}">{r['statNm']}</span>
                             <div class="place-name">📍 {r['placeNm']}</div>
                             <div class="card-row"><span class="time-text">⏰ {r['startTime']} ~ {r['endTime']}</span></div>
                             <div class="card-row">📄 {r['eventNm']}</div>
-                            <div class="info-sub"><span>🗓️ {r['startDt']}</span><span>👥 {r.get('mgDeptNm','')}</span></div>
+                            <div class="info-sub"><span>🗓️ {r['startDt']}</span><span>👥 {r['mgDeptNm']}</span></div>
                         </div>""", unsafe_allow_html=True)
 
+            # 기간 대관
             if show_period:
-                p_df = bu_df[(bu_df['startDt'] != bu_df['endDt']) & (bu_df['allowDay'].str.contains(target_weekday, na=False))]
+                p_df = bu_df[(bu_df['startDt'] != bu_df['endDt']) & (bu_df['allowDay'].str.contains(target_weekday_num, na=False))]
                 if not p_df.empty:
-                    has_bu_content = True
-                    st.markdown('<div class="section-title">📅 기간 대관</div>', unsafe_allow_html=True)
+                    has_content = True
+                    st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, r in p_df.iterrows():
-                        # 요일 정보 추출 (예: "1,2,3" -> "(월,화,수)")
-                        repeat_days = get_weekday_names(r.get('allowDay', ''))
+                        weekdays = get_weekday_names(r['allowDay'])
                         st.markdown(f"""
                         <div class="event-card"><span class="status-badge status-y">예약확정</span>
                             <div class="place-name">📍 {r['placeNm']}</div>
                             <div class="card-row"><span class="time-text">⏰ {r['startTime']} ~ {r['endTime']}</span></div>
                             <div class="card-row">📄 {r['eventNm']}</div>
-                            <div class="info-sub"><span>🗓️ {r['startDt']} ~ {r['endDt']} <b style="color:#1E3A5F;">{repeat_days}</b></span><span>👥 {r.get('mgDeptNm','')}</span></div>
+                            <div class="info-sub"><span>🗓️ {r['startDt']} ~ {r['endDt']} <b style="color:#1E3A5F;">{weekdays}</b></span><span>👥 {r['mgDeptNm']}</span></div>
                         </div>""", unsafe_allow_html=True)
-        
-        if not has_bu_content:
+
+        if not has_content:
             st.markdown('<div style="color:gray; padding:10px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
+    # 하단 여백 추가 (TOP 버튼이 카드 글자를 가리지 않게 함)
+    st.markdown('<div class="footer-spacer"></div>', unsafe_allow_html=True)
+
+# 6. TOP 버튼
 st.markdown('<a href="#top-anchor" class="top-floating">TOP</a>', unsafe_allow_html=True)
