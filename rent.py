@@ -7,18 +7,16 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# 2. CSS 스타일: 겹침 현상 제거 및 미세 간격 조정
+# 2. CSS 스타일: 입력창 겹침 해결 + 카드 줄간격 확대
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 0.8rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 요소 간 간격 미세 조정 (겹침 방지) */
-    [data-testid="stVerticalBlock"] { gap: 0.3rem !important; }
-    
-    /* 체크박스 간격 살짝만 압축 (글자 안 겹치게) */
-    div[data-testid="stCheckbox"] { margin-bottom: -5px !important; padding: 2px 0; }
+    /* [수정] 입력창 영역: 겹침 방지를 위해 간격 정상화 */
+    [data-testid="stVerticalBlock"] { gap: 0.8rem !important; }
+    div[data-testid="stCheckbox"] { margin-bottom: 5px !important; } 
 
     .main-title {
         font-size: 22px !important; font-weight: 800;
@@ -27,7 +25,7 @@ st.markdown("""
 
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; 
-        padding: 12px; border-radius: 10px; margin: 10px 0;
+        padding: 12px; border-radius: 10px; margin: 15px 0;
         border: 1px solid #D1D9E6; line-height: 1.4;
     }
     .res-main-title { font-size: 18px; font-weight: 800; color: #1E3A5F; display: block; }
@@ -38,51 +36,54 @@ st.markdown("""
 
     .sub-label {
         font-size: 16px !important; font-weight: 800; color: #2E5077;
-        margin-top: 10px !important; margin-bottom: 5px !important; display: block;
+        margin-top: 12px !important; margin-bottom: 8px !important; display: block;
     }
 
+    /* 결과 카드 부분 디자인 */
     .building-header { 
         font-size: 17px !important; font-weight: bold; color: #2E5077; 
-        margin-top: 15px; border-bottom: 2px solid #2E5077; 
-        padding-bottom: 3px; margin-bottom: 10px; 
+        margin-top: 20px; border-bottom: 2px solid #2E5077; 
+        padding-bottom: 5px; margin-bottom: 12px; 
     }
 
     .section-title { 
         font-size: 14px; font-weight: bold; color: #555; 
-        margin: 8px 0 5px 0; padding-left: 5px; border-left: 4px solid #ccc; 
+        margin: 12px 0 8px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
+    /* [핵심 수정] 카드 내부 줄간격 및 여백 확대 */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 8px 10px; border-radius: 5px; margin-bottom: 8px !important; 
-        background-color: #ffffff; line-height: 1.2 !important;
+        padding: 12px 15px; border-radius: 6px; margin-bottom: 12px !important; 
+        background-color: #ffffff; 
+        line-height: 1.5 !important; /* 줄간격 확대 */
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.03);
     }
     
-    .place-name { font-size: 15px; font-weight: bold; color: #1E3A5F; }
-    .time-row { font-size: 14px; font-weight: bold; color: #FF4B4B; margin-top: 2px; }
-    .event-name { font-size: 13px; margin-top: 3px; color: #333; font-weight: 500; }
+    .place-name { font-size: 15px; font-weight: bold; color: #1E3A5F; margin-bottom: 4px; }
+    .time-row { font-size: 14px; font-weight: bold; color: #FF4B4B; margin: 4px 0; }
+    .event-name { font-size: 13.5px; color: #333; font-weight: 500; margin-top: 6px; }
     
     .bottom-info { 
-        font-size: 11px; color: #666; margin-top: 5px; 
-        display: flex; justify-content: space-between;
+        font-size: 11px; color: #666; margin-top: 8px; 
+        display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 5px;
     }
 
-    .status-badge { display: inline-block; padding: 1px 6px; font-size: 10px; border-radius: 10px; font-weight: bold; float: right; }
+    .status-badge { display: inline-block; padding: 2px 8px; font-size: 10px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    /* 하단 여백 */
-    .bottom-spacer { height: 60px; }
+    .bottom-spacer { height: 80px; }
 
     .top-link-container {
         position: fixed; bottom: 20px; right: 15px; z-index: 999;
     }
     .top-link {
         display: block; background-color: #1E3A5F; color: white !important;
-        width: 40px; height: 40px; line-height: 40px;
+        width: 42px; height: 42px; line-height: 42px;
         text-align: center; border-radius: 50%; font-size: 11px;
         font-weight: bold; text-decoration: none !important;
-        box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -93,25 +94,24 @@ st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
-# 디폴트 오늘 날짜 설정
 target_date = st.date_input("날짜", value=date.today(), label_visibility="collapsed")
 
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
 for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v52_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v53_{b}"):
         selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_52")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_52")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_53")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_53")
 
 st.write(" ")
 st.markdown('<div id="btn-anchor"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True, type="primary")
 
-# 3. 데이터 로직 (원본 동일)
+# 3. 데이터 로직 (생략 없음)
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -135,7 +135,6 @@ if search_clicked:
     </div>
     """, unsafe_allow_html=True)
 
-    # 검색 시 결과 위치로 자동 스크롤
     components.html(
         f"""<script>var element = window.parent.document.getElementById("btn-anchor"); if (element) {{ element.scrollIntoView({{behavior: "smooth", block: "start"}}); }}</script>""",
         height=0,
