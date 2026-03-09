@@ -145,3 +145,4 @@ if search_clicked:
             <a href="#top-anchor" class="top-link">TOP</a>
         </div>
     """, unsafe_allow_html=True)
+
