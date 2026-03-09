@@ -6,68 +6,66 @@ from datetime import datetime, date, timedelta
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# 세션 상태 유지
+# 세션 상태 초기화
 if 'target_date' not in st.session_state:
     st.session_state.target_date = date.today()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# CSS: 다른 곳은 건드리지 않고 '컨트롤러 가로 고정' 및 '사각 박스'만 설정
+# CSS: 카드 디자인은 그대로 유지하고, 컨트롤러만 한 줄 고정
 st.markdown("""
 <style>
-    /* 컨트롤러 전체 컨테이너: 어떤 화면에서도 가로 한 줄 유지 */
-    .nav-wrapper {
+    #top-anchor { position: absolute; top: 0; left: 0; }
+    header { visibility: hidden; }
+    
+    /* [핵심] 모바일에서도 강제로 가로 한 줄 유지 */
+    .nav-flex-container {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: nowrap !important;
         align-items: center !important;
         width: 100% !important;
-        gap: 8px !important;
+        gap: 6px !important;
         margin: 15px 0;
     }
 
-    /* 사각형 타이틀 박스 (8의 비율) */
-    .nav-title-box {
+    /* 8 비율의 사각형 타이틀 박스 */
+    .title-box-center {
         flex: 8 !important;
-        background: white;
+        background: #ffffff;
         border: 1px solid #d1d9e6;
-        border-radius: 8px; /* 사각형 */
-        padding: 10px 5px;
+        border-radius: 8px;
+        padding: 8px 0;
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        min-height: 54px;
+        min-height: 52px;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }
 
-    /* 네비게이션 버튼 공통 (1의 비율) */
-    .nav-btn {
-        flex: 1 !important;
-        min-width: 45px;
-        height: 54px;
-        background: #f8f9fa;
-        border: 1px solid #d1d9e6;
-        border-radius: 8px;
-        color: #1E3A5F;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none !important;
+    /* 1 비율의 버튼 스타일 고정 */
+    .stButton > button {
+        width: 100% !important;
+        height: 52px !important;
+        border-radius: 8px !important;
+        padding: 0 !important;
     }
 
-    .res-main-title { font-size: 15px; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 2px; }
-    .res-sub-title { font-size: 14px; font-weight: 700; color: #333; }
-    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
-
-    /* 기존 카드 스타일 유지 */
-    .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
+    /* 카드 디자인 원복 (사용자 스타일 고정) */
+    .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 10px; }
     .section-title { font-size: 16px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px; border-radius: 5px; margin-bottom: 10px; background-color: #ffffff; line-height: 1.5; }
+    
+    .res-main-title { font-size: 15px; font-weight: 800; color: #1E3A5F; display: block; }
+    .res-sub-title { font-size: 14px; font-weight: 700; color: #333; }
+    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 상단 입력 UI
+st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
+
+# 2. 상단 입력 UI (변경 없음)
 st.markdown('### 🏫 성의교정 시설 대관 현황')
 target_date = st.date_input("날짜 선택", value=st.session_state.target_date)
 st.session_state.target_date = target_date
@@ -81,7 +79,7 @@ show_period = st.checkbox("기간 대관", value=True)
 if st.button("🔍 검색하기", use_container_width=True):
     st.session_state.search_performed = True
 
-# 3. 데이터 로직 (생략 없음)
+# 3. 데이터 로직 (기본 로직 유지)
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -91,34 +89,34 @@ def get_data(selected_date):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 4. 결과 및 1:8:1 고정 컨트롤러
+# 4. 결과 출력 및 고정형 컨트롤러
 if st.session_state.search_performed:
-    # 날짜 데이터 준비
-    d = st.session_state.target_date
-    w_str = ['월','화','수','목','금','토','일'][d.weekday()]
-    w_cls = "sat" if d.weekday() == 5 else ("sun" if d.weekday() == 6 else "")
-
-    # 깨지지 않는 통합 컨트롤러 (HTML + Streamlit 버튼 결합)
-    # columns를 쓰지 않고 HTML flex 구조 안에서 버튼만 개별 배치
-    c1, c2, c3 = st.columns([1, 8, 1])
+    # 1:8:1 강제 유지를 위해 columns를 CSS로 제어
+    col1, col2, col3 = st.columns([1, 8, 1])
     
-    with c1:
-        if st.button("◀", key="p_btn", use_container_width=True):
+    with col1:
+        if st.button("◀", key="prev_day"):
             st.session_state.target_date -= timedelta(days=1)
             st.rerun()
-    with c2:
+            
+    with col2:
+        d = st.session_state.target_date
+        w_list = ['월','화','수','목','금','토','일']
+        w_str = w_list[d.weekday()]
+        w_cls = "sat" if d.weekday() == 5 else ("sun" if d.weekday() == 6 else "")
         st.markdown(f"""
-        <div class="nav-title-box">
+        <div class="title-box-center">
             <span class="res-main-title">성의교정 대관 현황</span>
             <span class="res-sub-title">{d.strftime('%Y.%m.%d')}.<span class="{w_cls}">({w_str})</span></span>
         </div>
         """, unsafe_allow_html=True)
-    with c3:
-        if st.button("▶", key="n_btn", use_container_width=True):
+        
+    with col3:
+        if st.button("▶", key="next_day"):
             st.session_state.target_date += timedelta(days=1)
             st.rerun()
 
-    # 데이터 로드 및 출력
+    # 데이터 로드
     df_raw = get_data(st.session_state.target_date)
     t_weekday = str(st.session_state.target_date.weekday() + 1)
 
@@ -137,7 +135,7 @@ if st.session_state.search_performed:
                         has_content = True
                         st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
                         for _, r in ev_df.sort_values(by='startTime').iterrows():
-                            # 카드 디자인 원복 (📍 아이콘, ⏰ 빨간색 시간 등 기존 스타일 그대로)
+                            # 카드 내부 디자인 (📍 ⏰ 색상 유지)
                             st.markdown(f"""
                             <div class="event-card">
                                 📍 {r['placeNm']}<br>
