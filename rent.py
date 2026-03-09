@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# CSS 스타일 (원본 유지 및 하단 여백 보강)
+# CSS 스타일
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -35,6 +35,8 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
     .top-link-container { position: fixed; bottom: 25px; right: 20px; z-index: 999; }
     .top-link { display: block; background-color: #1E3A5F; color: white !important; width: 45px; height: 45px; line-height: 45px; text-align: center; border-radius: 50%; font-size: 12px; font-weight: bold; text-decoration: none !important; box-shadow: 2px 4px 8px rgba(0,0,0,0.3); }
+    /* 내역 없음 텍스트 스타일 */
+    .no-data-text { color: #888; font-size: 14px; padding: 10px 5px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -88,50 +90,58 @@ if search_clicked:
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     formatted_date = target_date.strftime("%Y.%m.%d")
     
-    st.markdown(f'<div class="date-display-box"><span class="res-main-title">성의교정 대관 현황</span><span class="res-sub-title">{formatted_date}.<span class="{w_class}">({w_str})</span></span></div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="date-display-box">
+        <span class="res-main-title">성의교정 대관 현황</span>
+        <span class="res-sub-title">{formatted_date}.<span class="{w_class}">({w_str})</span></span>
+    </div>
+    """, unsafe_allow_html=True)
 
     components.html(f"<script>var element = window.parent.document.getElementById('btn-anchor'); if (element) {{ element.scrollIntoView({{behavior: 'smooth', block: 'start'}}); }}</script>", height=0)
 
-    has_any_content = False
-    
-    if not df_raw.empty:
-        target_weekday = str(target_date.weekday() + 1)
-        # 선택된 건물 리스트를 순회하며 출력
-        for bu in selected_bu:
-            # 건물명 매칭 로직 (띄어쓰기 무시 및 포함 여부 확인)
+    target_weekday = str(target_date.weekday() + 1)
+
+    # 수정 1: 선택한 '각 건물' 루프 내에서 내역 체크
+    for bu in selected_bu:
+        st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+        
+        has_bu_content = False
+        if not df_raw.empty:
+            # 건물명 매칭 (공백 제거 후 비교)
             bu_df = df_raw[df_raw['buNm'].str.replace(" ", "").str.contains(bu.replace(" ", ""), na=False)].copy()
             
-            if bu_df.empty:
-                continue
-
-            # 유형별 필터링
-            today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
-            period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
-            valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])] if not period_ev.empty else pd.DataFrame()
-            
-            if not today_ev.empty or not valid_period_ev.empty:
-                has_any_content = True
-                st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
+            if not bu_df.empty:
+                today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
+                period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
+                valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])] if not period_ev.empty else pd.DataFrame()
                 
+                # 당일 대관 출력
                 if not today_ev.empty:
+                    has_bu_content = True
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                     for _, row in today_ev.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f'<div class="event-card today-card"><span class="status-badge {s_cls}">{s_txt}</span><div class="place-name">📍 {row["placeNm"]}</div><div class="time-row">⏰ {row["startTime"]} ~ {row["endTime"]}</div><div class="event-name">📄 {row["eventNm"]}</div><div class="bottom-info"><span class="period-label">🗓️ {row["startDt"]}</span><span class="dept-label">👥 {row["mgDeptNm"]}</span></div></div>', unsafe_allow_html=True)
                 
+                # 기간 대관 출력
                 if not valid_period_ev.empty:
+                    has_bu_content = True
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, row in valid_period_ev.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         day_info = get_weekday_names(row['allowDay'])
                         st.markdown(f'<div class="event-card"><span class="status-badge {s_cls}">{s_txt}</span><div class="place-name">📍 {row["placeNm"]}</div><div class="time-row">⏰ {row["startTime"]} ~ {row["endTime"]}</div><div class="event-name">📄 {row["eventNm"]}</div><div class="bottom-info"><span class="period-label">🗓️ {row["startDt"]} ~ {row["endDt"]} <span style="color:#2E5077;">{day_info}</span></span><span class="dept-label">👥 {row["mgDeptNm"]}</span></div></div>', unsafe_allow_html=True)
 
-    # 수정 1: 모든 건물을 돌았는데 아무 내용도 없으면 노출
-    if not has_any_content:
-        st.info("대관 내역이 없습니다.")
+        # 해당 건물에 내역이 없으면 메시지 출력
+        if not has_bu_content:
+            st.markdown('<div class="no-data-text">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
-    # 수정 2: 하단 여백 2행 (확실한 공백) 및 TOP 버튼
+    # 수정 2: 하단 여백 추가 (여백 2행 및 TOP 버튼 방해 금지)
     st.write("")
     st.write("")
-    st.markdown('<div style="height: 100px;"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="top-link-container"><a href="#top-anchor" class="top-link">TOP</a></div>', unsafe_allow_html=True)
+    st.markdown('<div style="margin-bottom: 100px;"></div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="top-link-container">
+            <a href="#top-anchor" class="top-link">TOP</a>
+        </div>
+    """, unsafe_allow_html=True)
