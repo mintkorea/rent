@@ -14,7 +14,6 @@ st.markdown("""
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 메인 입력창 간격 유지 */
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
 
     .main-title {
@@ -49,7 +48,6 @@ st.markdown("""
         margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; 
     }
     
-    /* 카드 줄간격 조절 (1.4) */
     .event-card { 
         border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
         padding: 10px 12px; border-radius: 5px; 
@@ -73,7 +71,17 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } 
     .status-n { background-color: #E8F0FE; color: #1967D2; }
 
-    .no-data { padding: 30px 10px; text-align: center; color: #d63384; font-size: 16px; font-weight: bold; border: 1px dashed #d63384; border-radius: 10px; margin-top: 20px; background-color: #fff0f5; }
+    /* 내역 없음 스타일 강조 */
+    .no-data-banner {
+        padding: 20px;
+        background-color: #FFF5F5;
+        border: 1px solid #FEB2B2;
+        border-radius: 10px;
+        color: #C53030;
+        text-align: center;
+        font-weight: bold;
+        margin-top: 20px;
+    }
 
     .bottom-spacer { height: 80px; }
 
@@ -101,25 +109,23 @@ st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_ht
 ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
 selected_bu = []
 for b in ALL_BUILDINGS:
-    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v57_{b}"):
+    if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v58_{b}"):
         selected_bu.append(b)
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_today_57")
-show_period = st.checkbox("기간 대관", value=True, key="chk_period_57")
+show_today = st.checkbox("당일 대관", value=True, key="chk_today_58")
+show_period = st.checkbox("기간 대관", value=True, key="chk_period_58")
 
 st.write(" ")
-# 검색 버튼 클릭 시 이 위치로 스크롤
-st.markdown('<div id="result-scroll-target"></div>', unsafe_allow_html=True)
+# 검색 버튼 클릭 시 스크롤될 위치
+st.markdown('<div id="scroll-here"></div>', unsafe_allow_html=True)
 search_clicked = st.button("🔍 검색하기", use_container_width=True, type="primary")
 
-# 요일 변환 함수
 def get_day_names(day_string):
     day_map = {'1':'월', '2':'화', '3':'수', '4':'목', '5':'금', '6':'토', '7':'일'}
     days = [day_map[d.strip()] for d in str(day_string).split(",") if d.strip() in day_map]
     return f"({','.join(days)})" if days else ""
 
-# 3. 데이터 로직
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -131,11 +137,11 @@ def get_data(selected_date):
 
 # 4. 결과 출력
 if search_clicked:
-    # JavaScript 스크롤 실행
+    # 스크롤 자바스크립트
     components.html(
         """
         <script>
-            window.parent.document.getElementById('result-scroll-target').scrollIntoView({behavior: 'smooth'});
+            window.parent.document.getElementById('scroll-here').scrollIntoView({behavior: 'smooth'});
         </script>
         """, height=0
     )
@@ -152,24 +158,24 @@ if search_clicked:
     </div>
     """, unsafe_allow_html=True)
 
-    has_any_data = False 
+    has_any_content = False
 
     if not df_raw.empty:
         target_weekday = str(target_date.weekday() + 1)
+        
+        # 실제 조건에 맞는 데이터 필터링 시뮬레이션
         for bu in selected_bu:
             bu_df = df_raw[df_raw['buNm'].str.replace(" ", "").str.contains(bu.replace(" ", ""), na=False)].copy()
-            if bu_df.empty: continue
             
-            t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
-            p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
-            valid_p = p_ev[p_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
-            
-            # 건물 내에 표시할 데이터가 하나라도 있는 경우만 헤더 출력
-            if (show_today and not t_ev.empty) or (show_period and not valid_p.empty):
+            t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
+            p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
+            valid_p = p_ev[p_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
+
+            if not t_ev.empty or not valid_p.empty:
+                has_any_content = True
                 st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-                has_any_data = True
-            
-                if show_today and not t_ev.empty:
+                
+                if not t_ev.empty:
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
                     for _, row in t_ev.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
@@ -182,7 +188,7 @@ if search_clicked:
                             <div class="bottom-info"><span>🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div>
                         </div>""", unsafe_allow_html=True)
                 
-                if show_period and not valid_p.empty:
+                if not valid_p.empty:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
                     for _, row in valid_p.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
@@ -195,10 +201,10 @@ if search_clicked:
                             <div class="event-name">📄 {row['eventNm']}</div>
                             <div class="bottom-info"><span>🗓️ {row['startDt']} ~ {row['endDt']} <span class="allow-days">{days_label}</span></span><span>👥 {row['mgDeptNm']}</span></div>
                         </div>""", unsafe_allow_html=True)
-    
-    # 내역이 하나도 없는 경우 (전체 체크)
-    if not has_any_data:
-        st.markdown('<div class="no-data">❌ 해당 조건에 맞는 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+
+    # 최종적으로 아무 내용도 출력되지 않았을 때
+    if not has_any_content:
+        st.markdown('<div class="no-data-banner">⚠️ 조회된 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="bottom-spacer"></div>', unsafe_allow_html=True)
     st.markdown('<div class="top-link-container"><a href="#top-anchor" class="top-link">TOP</a></div>', unsafe_allow_html=True)
