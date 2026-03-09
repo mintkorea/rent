@@ -12,24 +12,35 @@ if 'target_date' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# [추가] 화살표 버튼 클릭 시 날짜 변경 함수 (절대 기존 로직 수정 없음)
-def change_date(days):
+# [기능 추가] 화살표 클릭 시 작동하는 함수
+def move_date(days):
     st.session_state.target_date += timedelta(days=days)
     st.session_state.search_performed = True
 
-# CSS 스타일 (사용자님의 기존 스타일 100% 유지)
+# CSS 스타일 (기존 소스 유지 + 화살표 버튼 투명화 스타일 추가)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
+    
     .main-title { font-size: 26px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 5px !important; }
-    .date-display-box { text-align: center; background-color: #F8FAFF; padding: 20px 10px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #D1D9E6; }
+    
+    /* 타이틀 박스 디자인 유지 */
+    .date-display-box { 
+        text-align: center; background-color: #F8FAFF; padding: 20px 10px; 
+        border-radius: 12px; margin-bottom: 20px; border: 1px solid #D1D9E6; 
+    }
     .res-main-title { font-size: 24px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 8px; }
-    .date-row { display: flex; align-items: center; justify-content: center; gap: 15px; }
-    /* 버튼 스타일 조정: 링크 형태 유지 */
-    div.stButton > button.date-btn { background: none !important; border: none !important; color: #1E3A5F !important; font-size: 32px !important; font-weight: bold !important; padding: 0 !important; cursor: pointer; }
+    
+    /* 화살표 버튼을 투명하게 만들어 박스 디자인에 녹임 */
+    div.stButton > button.date-nav-btn {
+        background: none !important; border: none !important; 
+        font-size: 32px !important; font-weight: bold !important; 
+        color: #1E3A5F !important; padding: 0 !important; width: auto !important; height: auto !important;
+    }
+    
     .res-sub-title { font-size: 20px !important; font-weight: 700; color: #333; }
     .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
     .sub-label { font-size: 18px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; display: block; }
@@ -55,6 +66,7 @@ st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 
 # 2. 메인 UI
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
+
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
 target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 st.session_state.target_date = target_date
@@ -72,7 +84,7 @@ st.markdown('<div id="btn-anchor"></div>', unsafe_allow_html=True)
 if st.button("🔍 검색하기", use_container_width=True):
     st.session_state.search_performed = True
 
-# 3. 데이터 로직 (기존 유지)
+# 3. 데이터 로직 (기존 소스 유지)
 @st.cache_data(ttl=300)
 def get_data(selected_date):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -98,12 +110,15 @@ if st.session_state.search_performed:
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     formatted_date = d.strftime("%Y.%m.%d")
     
-    # [수정] 화살표 작동을 위해 st.columns를 활용한 버튼 배치 (디자인 유지)
+    # [수정 포인트] 타이틀 박스 안에 화살표 버튼 삽입
     st.markdown('<div class="date-display-box"><span class="res-main-title">성의교정 대관 현황</span>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 4, 1])
-    with c1: st.button("←", key="prev_date", on_click=change_date, args=(-1,))
-    with c2: st.markdown(f'<div style="text-align:center; margin-top:10px;"><span class="res-sub-title">{formatted_date}.<span class="{w_class}">({w_str})</span></span></div>', unsafe_allow_html=True)
-    with c3: st.button("→", key="next_date", on_click=change_date, args=(1,))
+    c1, c2, c3 = st.columns([1, 3, 1])
+    with c1:
+        st.button("←", key="prev_arrow", on_click=move_date, args=(-1,), help="하루 전", type="secondary")
+    with c2:
+        st.markdown(f'<div style="margin-top:10px;"><span class="res-sub-title">{formatted_date}.<span class="{w_class}">({w_str})</span></span></div>', unsafe_allow_html=True)
+    with c3:
+        st.button("→", key="next_arrow", on_click=move_date, args=(1,), help="하루 뒤", type="secondary")
     st.markdown('</div>', unsafe_allow_html=True)
 
     components.html(f"<script>var element = window.parent.document.getElementById('btn-anchor'); if (element) {{ element.scrollIntoView({{behavior: 'smooth', block: 'start'}}); }}</script>", height=0)
