@@ -113,6 +113,10 @@ st.markdown("""
         text-decoration: none !important;
         box-shadow: 2px 4px 8px rgba(0,0,0,0.3);
     }
+    /* 하단 여백용 클래스 추가 */
+    .bottom-spacer {
+        height: 80px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,7 +126,7 @@ st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
-# 수정 3: 기본 날짜를 Today로 설정
+# 수정 3: 기본 날짜 Today
 target_date = st.date_input("날짜", value=date.today(), label_visibility="collapsed")
 
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
@@ -160,12 +164,10 @@ def get_weekday_names(allow_day_str):
 if search_clicked:
     df_raw = get_data(target_date)
     
-    # 요약 정보 및 색상 계산
     weekday_dict = {0: '월', 1: '화', 2: '수', 3: '목', 4: '금', 5: '토', 6: '일'}
     w_idx = target_date.weekday()
     w_str = weekday_dict[w_idx]
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
-    
     formatted_date = target_date.strftime("%Y.%m.%d")
     
     st.markdown(f"""
@@ -189,29 +191,27 @@ if search_clicked:
         height=0,
     )
 
-    found_any = False
+    # 수정 1: 결과 유무 체크 로직 강화
+    has_any_content = False
+    
     if not df_raw.empty:
         target_weekday = str(target_date.weekday() + 1)
         for bu in selected_bu:
             bu_df = df_raw[df_raw['buNm'].str.contains(bu, na=False)].copy()
-            if bu_df.empty: continue
             
-            # 실제 대관 내역 존재 여부 확인을 위한 필터링
-            today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']]
-            period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']]
-            valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])]
+            # 건물별 데이터 필터링
+            today_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
+            period_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
+            valid_period_ev = period_ev[period_ev['allowDay'].apply(lambda x: target_weekday in [d.strip() for d in str(x).split(",")])] if not period_ev.empty else pd.DataFrame()
             
-            # 표시할 내역이 하나라도 있는 경우에만 건물 헤더 출력
-            if (show_today and not today_ev.empty) or (show_period and not valid_period_ev.empty):
-                found_any = True
+            if not today_ev.empty or not valid_period_ev.empty:
+                has_any_content = True
                 st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
                 
-                bu_df['prio'] = bu_df['placeNm'].apply(lambda x: 0 if '가' <= str(x)[0] <= '힣' else 1)
-                bu_df = bu_df.sort_values(by=['prio', 'placeNm', 'startTime'])
-                
-                if show_today and not today_ev.empty:
+                # 당일 대관 출력
+                if not today_ev.empty:
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
-                    for _, row in today_ev.iterrows():
+                    for _, row in today_ev.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""
                         <div class="event-card today-card">
@@ -226,9 +226,10 @@ if search_clicked:
                         </div>
                         """, unsafe_allow_html=True)
                 
-                if show_period and not valid_period_ev.empty:
+                # 기간 대관 출력
+                if not valid_period_ev.empty:
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
-                    for _, row in valid_period_ev.iterrows():
+                    for _, row in valid_period_ev.sort_values(by='startTime').iterrows():
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         day_info = get_weekday_names(row['allowDay'])
                         st.markdown(f"""
@@ -244,12 +245,12 @@ if search_clicked:
                         </div>
                         """, unsafe_allow_html=True)
 
-    # 수정 1: 대관 내역이 없으면 메시지 표출
-    if not found_any:
-        st.info("대관 내역이 없습니다.")
+    # 최종 결과가 전혀 없는 경우
+    if not has_any_content:
+        st.markdown('<p style="text-align:center; padding:20px; color:#666;">대관 내역이 없습니다.</p>', unsafe_allow_html=True)
 
-    # 수정 2: 마지막에 여백 2행 추가 및 TOP 버튼
-    st.write("\n\n") 
+    # 수정 2: 강제 하단 여백 및 TOP 버튼
+    st.markdown('<div class="bottom-spacer"></div>', unsafe_allow_html=True)
     st.markdown("""
         <div class="top-link-container">
             <a href="#top-anchor" class="top-link">TOP</a>
