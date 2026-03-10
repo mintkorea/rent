@@ -3,6 +3,8 @@ import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
+from zoneinfo import ZoneInfo
+
 
 # 1. 페이지 설정 및 세션 초기화
 KST = ZoneInfo("Asia/Seoul")
