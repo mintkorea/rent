@@ -15,7 +15,8 @@ def today_kst():
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 if 'target_date' not in st.session_state:
-    st.session_state.target_date = date.today()
+    st.session_state.target_date = today_kst()
+
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
