@@ -5,6 +5,11 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 
 # 1. 페이지 설정 및 세션 초기화
+KST = ZoneInfo("Asia/Seoul")
+
+def today_kst():
+    return datetime.now(KST).date()
+
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 if 'target_date' not in st.session_state:
