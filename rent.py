@@ -4,86 +4,88 @@ import pandas as pd
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-# 1. 환경 설정
+# 1. 시간 및 기본 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# 세션 상태 관리 (검색 결과 및 날짜 유지)
-if "target_date" not in st.session_state:
-    st.session_state.target_date = today_kst()
-if "search_done" not in st.session_state:
-    st.session_state.search_done = False
+# [핵심] URL 파라미터로 날짜 제어 (버튼 클릭 시 URL이 변경됨)
+params = st.query_params
+if "d" in params:
+    curr_date = datetime.strptime(params["d"], "%Y-%m-%d").date()
+else:
+    curr_date = today_kst()
 
-# 2. CSS (모바일 가로 고정 및 버튼 디자인)
+# 2. CSS (디자인 복구 및 가로 한 줄 고정)
 st.markdown("""
 <style>
     .block-container { padding: 1rem 0.5rem !important; max-width: 500px !important; }
+    header { visibility: hidden; }
     
-    /* [핵심] 날짜 네비게이션 바: 절대 깨지지 않는 가로 정렬 */
-    .nav-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    .nav-table td { padding: 2px; }
-    
-    /* 상단 정보 박스 디자인 */
+    /* 3분할 링크 바 디자인 */
+    .link-bar {
+        display: flex;
+        justify-content: space-between;
+        background: white;
+        border: 1px solid #D1D9E6;
+        border-radius: 10px;
+        margin: 10px 0;
+        overflow: hidden;
+    }
+    .nav-link {
+        flex: 1;
+        text-align: center;
+        padding: 12px 0;
+        text-decoration: none !important;
+        color: #1E3A5F !important;
+        font-weight: bold;
+        border-right: 1px solid #F0F0F0;
+        font-size: 14px;
+    }
+    .nav-link:last-child { border-right: none; }
+    .nav-link:active { background: #F0F4FA; }
+
+    /* 기존 날짜 박스 디자인 유지 */
     .title-box { background-color: #F0F4FA; border: 1px solid #D1D9E6; border-radius: 12px 12px 0 0; padding: 10px; text-align: center; font-weight: 800; color: #1E3A5F; }
-    .date-display-box { background-color: #FFFFFF; border: 1px solid #D1D9E6; border-top: none; border-radius: 0 0 12px 12px; padding: 10px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 15px; }
+    .date-display-box { background-color: #FFFFFF; border: 1px solid #D1D9E6; border-top: none; border-radius: 0 0 12px 12px; padding: 10px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 입력 UI
+# 3. 상단 제목 및 네비게이션
 st.markdown('<h3 style="text-align:center;">🏫 성의교정 시설 대관 현황</h3>', unsafe_allow_html=True)
 
-# 날짜 선택 (직접 선택 시 세션 업데이트)
-new_date = st.date_input("조회 날짜", value=st.session_state.target_date, label_visibility="collapsed")
-if new_date != st.session_state.target_date:
-    st.session_state.target_date = new_date
-    st.rerun()
+# 날짜 계산
+prev_d = (curr_date - timedelta(days=1)).strftime("%Y-%m-%d")
+next_d = (curr_date + timedelta(days=1)).strftime("%Y-%m-%d")
+today_d = today_kst().strftime("%Y-%m-%d")
 
-st.markdown('**🏢 건물 선택**')
-all_bu = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-selected_bu = [b for b in all_bu if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"ch_{b}")]
+# [해결] Before / Today / Next 링크 바
+st.markdown(f"""
+    <div class="link-bar">
+        <a href="./?d={prev_d}" target="_self" class="nav-link">Before</a>
+        <a href="./?d={today_d}" target="_self" class="nav-link">Today</a>
+        <a href="./?d={next_d}" target="_self" class="nav-link">Next</a>
+    </div>
+""", unsafe_allow_html=True)
 
-# 검색 버튼 (이 버튼을 눌러야 결과가 나옵니다)
-if st.button("🔍 검색하기", use_container_width=True, type="primary"):
-    st.session_state.search_done = True
+# 4. 날짜 정보 표시
+w_str = ['월','화','수','목','금','토','일'][curr_date.weekday()]
+st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="date-display-box">{curr_date.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
 
-# 4. 결과 출력 및 네비게이션
-if st.session_state.search_done:
-    d = st.session_state.target_date
-    w_str = ['월','화','수','목','금','토','일'][d.weekday()]
+# 5. 건물 선택 및 검색 (사용자님 원본 로직)
+with st.expander("🏢 건물 및 유형 선택", expanded=True):
+    bu_list = ["성의회관", "의생명산업연구원", "옴니버스 파크", "대학본관"]
+    selected_bu = [b for b in bu_list if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"c_{b}")]
+    
+    if st.button("🔍 이 날짜로 검색하기", use_container_width=True, type="primary"):
+        st.session_state.do_search = True
 
-    # 날짜 표시판
-    st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="date-display-box">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
+# 6. 결과 출력 (예시)
+if st.session_state.get("do_search"):
+    st.info(f"📅 {curr_date} 데이터를 조회하고 있습니다...")
+    # 여기에 기존의 데이터 로딩 및 카드 출력 코드를 붙여넣으시면 됩니다.
 
-    # [해결] 모바일에서 왼쪽 버튼이 사라지지 않도록 st.columns 대신 직접 버튼 배치
-    # 비율을 1:2:1로 고정하여 버튼이 잘리지 않게 함
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c1:
-        if st.button("◀", key="nav_prev", use_container_width=True):
-            st.session_state.target_date -= timedelta(days=1)
-            st.rerun()
-    with c2:
-        if st.button("오늘", key="nav_today", use_container_width=True):
-            st.session_state.target_date = today_kst()
-            st.rerun()
-    with c3:
-        if st.button("▶", key="nav_next", use_container_width=True):
-            st.session_state.target_date += timedelta(days=1)
-            st.rerun()
-
-    # 데이터 로딩 및 결과 카드 출력 (기존 로직 사용)
-    st.success(f"📅 {d} 대관 내역을 조회 중입니다...")
-    # 여기에 실제 데이터 필터링 및 st.markdown(카드디자인) 로직을 넣으세요.
-
-# 5. 플로팅 탑버튼 (자바스크립트로 강제 고정)
-st.components.v1.html("""
-<script>
-    const b = window.parent.document.createElement('button');
-    b.innerHTML = '▲'; b.id = 'topBtn';
-    b.style.cssText = "position:fixed;bottom:20px;right:20px;width:45px;height:45px;border-radius:50%;background:#2E5077;color:white;border:none;z-index:99999;box-shadow:0 3px 10px rgba(0,0,0,0.3);cursor:pointer;";
-    b.onclick = () => window.parent.scrollTo({top:0, behavior:'smooth'});
-    if(!window.parent.document.getElementById('topBtn')) window.parent.document.body.appendChild(b);
-</script>
-""", height=0)
+# 7. 플로팅 탑버튼 (단순 앵커 방식)
+st.markdown('<a href="#" style="position:fixed;bottom:20px;right:20px;width:45px;height:45px;background:#2E5077;color:white;border-radius:50%;text-align:center;line-height:45px;text-decoration:none;z-index:999;box-shadow:0 3px 10px rgba(0,0,0,0.3);">▲</a>', unsafe_allow_html=True)
