@@ -5,16 +5,30 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정
+# 1. 페이지 설정 및 시간대 정의
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
+# --- [핵심 수정] URL 파라미터 처리 로직 (최상단 배치) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
+
+# URL에서 날짜(?d=YYYY-MM-DD)를 읽어와 세션 상태 업데이트
+query_params = st.query_params
+if "d" in query_params:
+    try:
+        url_date = datetime.strptime(query_params["d"], "%Y-%m-%d").date()
+        # 현재 세션 날짜와 URL 날짜가 다르면 강제 업데이트 후 조회 상태로 전환
+        if st.session_state.target_date != url_date:
+            st.session_state.target_date = url_date
+            st.session_state.search_performed = True
+    except:
+        pass
+# ---------------------------------------------------
 
 # 2. CSS 스타일
 st.markdown("""
@@ -61,6 +75,7 @@ st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div
 
 # 3. 입력부
 with st.form("search_form"):
+    # 세션에 저장된 날짜를 기본값으로 사용
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
@@ -74,6 +89,8 @@ with st.form("search_form"):
     if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
+        # 검색 시 URL 파라미터 제거 (선택 사항)
+        st.query_params.clear()
 
 # 4. 데이터 로직
 @st.cache_data(ttl=300)
@@ -92,12 +109,9 @@ def get_weekday_names(allow_day_str):
     day_list = [days.get(d.strip()) for d in str(allow_day_str).split(",") if days.get(d.strip())]
     return f"({','.join(day_list)})" if day_list else ""
 
-# 5. 결과 출력 및 강제 이동 로직
+# 5. 결과 출력
 if st.session_state.search_performed:
-    # [핵심] 결과 영역 시작 지점에 앵커 태그 삽입
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    
-    # [핵심] JavaScript를 이용해 해당 위치로 강제 스크롤 (다시 검색 시에도 작동하도록 위치 조정)
     components.html(f"""
         <script>
             window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});
@@ -106,7 +120,12 @@ if st.session_state.search_performed:
 
     d = st.session_state.target_date
     df_raw = get_data(d)
-    prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
+    
+    # 이동 버튼용 날짜 계산
+    prev_d_str = (d - timedelta(1)).strftime('%Y-%m-%d')
+    next_d_str = (d + timedelta(1)).strftime('%Y-%m-%d')
+    today_d_str = today_kst().strftime('%Y-%m-%d')
+    
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
@@ -116,9 +135,9 @@ if st.session_state.search_performed:
         <span class="res-sub-title">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
     </div>
     <div class="nav-link-bar">
-        <a href="./?d={prev_d}" target="_self" class="nav-item">◀ Before</a>
-        <a href="./?d={today_d}" target="_self" class="nav-item">Today</a>
-        <a href="./?d={next_d}" target="_self" class="nav-item">Next ▶</a>
+        <a href="./?d={prev_d_str}" target="_self" class="nav-item">◀ Before</a>
+        <a href="./?d={today_d_str}" target="_self" class="nav-item">Today</a>
+        <a href="./?d={next_d_str}" target="_self" class="nav-item">Next ▶</a>
     </div>
     """, unsafe_allow_html=True)
 
