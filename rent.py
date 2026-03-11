@@ -20,7 +20,7 @@ if "target_date" not in st.session_state:
 if "search_performed" not in st.session_state:
     st.session_state.search_performed = False
 
-# 3. CSS 스타일 (이미지 f0da7f 디자인 반영: 버튼 간격 최소화)
+# 3. CSS 스타일 (버튼들을 하나로 합치는 디자인)
 st.markdown("""
 <style>
     .block-container { padding: 1.5rem 1rem !important; max-width: 500px !important; }
@@ -33,18 +33,22 @@ st.markdown("""
     .red-date { color: #FF0000 !important; }
     .black-date { color: #333333 !important; }
 
-    /* 버튼 사이 간격 제거 및 스타일 */
+    /* 버튼 간 간격을 0으로 만들고 테두리를 겹쳐 하나처럼 보이게 설정 */
     div[data-testid="stHorizontalBlock"] { gap: 0px !important; }
     div[data-testid="stHorizontalBlock"] button {
-        height: 38px !important;
+        height: 40px !important;
         border: 1px solid #D1D9E6 !important;
         background-color: white !important;
-        padding: 0px 2px !important;
+        border-radius: 0px !important; /* 각진 버튼으로 일체감 부여 */
+        margin: 0px !important;
     }
+    /* 양쪽 끝 버튼만 둥글게 처리 */
+    div[data-testid="column"]:first-child button { border-radius: 8px 0 0 8px !important; border-right: none !important; }
+    div[data-testid="column"]:last-child button { border-radius: 0 8px 8px 0 !important; border-left: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 입력부 (기존 로직 100% 보존)
+# 4. 상단 입력부
 st.markdown('<h2 style="text-align:center;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
@@ -59,7 +63,7 @@ show_period = st.checkbox("기간 대관", value=True)
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
 
-# 5. 데이터 로직 (원본 보존)
+# 5. 데이터 로직
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -69,7 +73,7 @@ def get_data(d):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 6. 결과 출력 영역
+# 6. 결과 출력
 if st.session_state.search_performed:
     d = st.session_state.target_date
     w_idx = d.weekday()
@@ -79,18 +83,18 @@ if st.session_state.search_performed:
     st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="date-display-box {c_cls}">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
     
-    # [디자인 수정] 버튼 사이 간격을 좁힌 레이아웃
-    c1, c2, c3, c4, c5 = st.columns([1.6, 0.4, 1.2, 0.4, 1.6])
-    with c2:
-        if st.button("◀", key="prev_day"):
+    # [디자인 수정] 버튼들을 하나처럼 보이게 밀착 배치
+    c1, c2, c3 = st.columns([1, 4, 1])
+    with c1:
+        if st.button("◀", use_container_width=True, key="mv_p"):
             st.session_state.target_date -= timedelta(days=1)
             st.rerun()
-    with c3:
-        if st.button("오늘", use_container_width=True, key="today_day"):
+    with c2:
+        if st.button("오늘", use_container_width=True, key="mv_t"):
             st.session_state.target_date = today_kst()
             st.rerun()
-    with c4:
-        if st.button("▶", key="next_day"):
+    with c3:
+        if st.button("▶", use_container_width=True, key="mv_n"):
             st.session_state.target_date += timedelta(days=1)
             st.rerun()
 
@@ -104,17 +108,16 @@ if st.session_state.search_performed:
             if not bu_df.empty:
                 t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
                 p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
-                
-                # 기간 대관 요일 필터링 (원본 절대 보존)
                 v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: str(w_idx+1) in [i.strip() for i in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
                 
                 combined = pd.concat([t_ev, v_p_ev]).sort_values(by='startTime')
                 if not combined.empty:
                     has_any = True
                     for _, row in combined.iterrows():
-                        # [핵심] 부서명 데이터 추출 (원본 소스 필드 regDeptNm 또는 deptNm 확인)
-                        # 원본 이미지(f14301)에서 '학사지원팀' 등이 나오는 위치입니다.
-                        dept_name = row.get('regDeptNm', row.get('deptNm', row.get('regUserNm', '정보없음')))
+                        # [핵심 수정] 부서명 필드 mgDeptNm 적용
+                        dept_text = row.get('mgDeptNm')
+                        if not dept_text or str(dept_text).strip() == '':
+                            dept_text = row.get('deptNm', row.get('regUserNm', '정보없음'))
 
                         st.markdown(f"""
                         <div style="border:1px solid #E0E0E0; border-left:8px solid #2E5077; padding:15px; border-radius:8px; margin-bottom:12px; background:white; position:relative;">
@@ -124,11 +127,9 @@ if st.session_state.search_performed:
                             <div style="font-size:14px; color:#333; margin-bottom:12px; line-height:1.4;">📄 {row['eventNm']}</div>
                             <div style="border-top:1px solid #F0F0F0; padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#666;">
                                 <span>📅 {row['startDt']}</span>
-                                <span>👤 {dept_name}</span>
+                                <span>👤 {dept_text}</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
         if not has_any:
             st.markdown('<div style="color:#999; font-size:13px; padding:20px; text-align:center; background:#FAFAFA; border:1px dashed #DDD; border-radius:10px;">조회된 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
-
-    st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
