@@ -22,14 +22,11 @@ st.markdown("""
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
-    
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
-    
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
     
-    /* [수정] 결과 타이틀 박스 줄간격 축소 */
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
@@ -62,7 +59,7 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (st.form 유지)
+# 3. 입력부
 with st.form("search_form"):
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
@@ -95,10 +92,17 @@ def get_weekday_names(allow_day_str):
     day_list = [days.get(d.strip()) for d in str(allow_day_str).split(",") if days.get(d.strip())]
     return f"({','.join(day_list)})" if day_list else ""
 
-# 5. 결과 출력
+# 5. 결과 출력 및 강제 이동 로직
 if st.session_state.search_performed:
+    # [핵심] 결과 영역 시작 지점에 앵커 태그 삽입
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    components.html("""<script>var target = window.parent.document.getElementById('result-anchor'); if (target) { target.scrollIntoView({behavior: 'smooth', block: 'start'}); }</script>""", height=0)
+    
+    # [핵심] JavaScript를 이용해 해당 위치로 강제 스크롤 (다시 검색 시에도 작동하도록 위치 조정)
+    components.html(f"""
+        <script>
+            window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});
+        </script>
+    """, height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
@@ -135,7 +139,6 @@ if st.session_state.search_performed:
                         st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
                         for _, row in ev_df.sort_values(by='startTime').iterrows():
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                            # [수정] 기간 대관 요일 정보 포함
                             day_info = get_weekday_names(row['allowDay']) if title == "🗓️ 기간 대관" else ""
                             period = f"{row['startDt']} ~ {row['endDt']} {day_info}" if title == "🗓️ 기간 대관" else row['startDt']
                             
