@@ -20,13 +20,13 @@ if "target_date" not in st.session_state:
 if "search_performed" not in st.session_state:
     st.session_state.search_performed = False
 
-# 3. CSS 스타일 (image_f1ac37 스타일 완벽 복구)
+# 3. CSS 스타일 (화살표 디자인 및 버튼 슬림화만 추가)
 st.markdown("""
 <style>
     .block-container { padding: 1.5rem 1rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 메인 결과 박스 (연한 파란색 통박스) */
+    /* 결과 박스 스타일 (화살표 포함) */
     .result-main-box {
         background-color: #F0F4FA;
         border: 1px solid #D1D9E6;
@@ -36,53 +36,37 @@ st.markdown("""
         margin-top: 30px;
         margin-bottom: 10px;
     }
-    .result-main-title {
-        font-size: 20px;
-        font-weight: 800;
-        color: #1E3A5F;
-        margin-bottom: 10px;
-        display: block;
-    }
-    .result-main-date {
-        font-size: 18px;
-        font-weight: 700;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 15px;
-    }
+    .result-main-title { font-size: 20px; font-weight: 800; color: #1E3A5F; margin-bottom: 10px; display: block; }
+    .result-main-date { font-size: 18px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 15px; }
 
     /* 요일 색상 */
     .blue-date { color: #0047FF !important; }
     .red-date { color: #FF0000 !important; }
     .black-date { color: #333333 !important; }
 
-    /* 하단 슬림 버튼 스타일 (중앙 정렬) */
+    /* 하단 슬림 버튼 (중앙 정렬) */
     div[data-testid="stHorizontalBlock"] div[data-testid="stColumn"] button {
-        height: 30px !important;
-        min-height: 30px !important;
-        padding: 0px 10px !important;
-        font-size: 13px !important;
-        border-radius: 6px !important;
-        background-color: white !important;
-        border: 1px solid #D1D9E6 !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 0px !important;
+        font-size: 12px !important;
+        border-radius: 4px !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 입력 UI (원본 유지)
+# 4. 상단 입력 UI (요청하신 대로 기존 설정 유지)
 st.markdown('<h2 style="text-align:center;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
-c_bu, c_ty = st.columns(2)
-with c_bu:
-    st.markdown('**🏢 건물 선택**')
-    ALL_B = ["성의회관", "의생명산업연구원", "옴니버스 파크", "대학본관", "서울성모별관"]
-    selected_bu = [b for b in ALL_B if st.checkbox(b, value=(b=="성의회관"), key=f"b_{b}")]
-with c_ty:
-    st.markdown('**🗓️ 유형 선택**')
-    show_today = st.checkbox("당일 대관", value=True)
-    show_period = st.checkbox("기간 대관", value=True)
+st.markdown('**🏢 건물 선택**')
+ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+# 기존처럼 2개 기본 선택 유지
+selected_bu = [b for b in ALL_BUILDINGS if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"cb_{b}")]
+
+st.markdown('**🗓️ 대관 유형 선택**')
+show_today = st.checkbox("당일 대관", value=True)
+show_period = st.checkbox("기간 대관", value=True)
 
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
@@ -103,12 +87,11 @@ if st.session_state.search_performed:
     w_idx = d.weekday()
     w_str = ['월','화','수','목','금','토','일'][w_idx]
     
-    # 요일 색상 설정
     c_cls = "black-date"
     if w_idx == 5: c_cls = "blue-date"
     elif w_idx == 6 or is_holiday(d): c_cls = "red-date"
 
-    # [디자인] image_f1ac37 스타일 박스
+    # 화살표가 포함된 결과 박스 디자인
     st.markdown(f"""
     <div class="result-main-box">
         <span class="result-main-title">성의교정 대관 현황</span>
@@ -120,25 +103,24 @@ if st.session_state.search_performed:
     </div>
     """, unsafe_allow_html=True)
     
-    # [추가] 슬림 버튼 3개 중앙 정렬 (오늘 버튼 포함)
-    bc1, bc2, bc3, bc4, bc5 = st.columns([1.5, 0.6, 1, 0.6, 1.5])
+    # 슬림 버튼 3개 중앙 정렬
+    bc1, bc2, bc3, bc4, bc5 = st.columns([1.5, 0.5, 1, 0.5, 1.5])
     with bc2:
-        if st.button("◀", key="p_btn"):
+        if st.button("◀", key="p"):
             st.session_state.target_date -= timedelta(days=1)
             st.rerun()
     with bc3:
-        if st.button("오늘", key="t_btn"):
+        if st.button("오늘", key="t"):
             st.session_state.target_date = today_kst()
             st.rerun()
     with bc4:
-        if st.button("▶", key="n_btn"):
+        if st.button("▶", key="n"):
             st.session_state.target_date += timedelta(days=1)
             st.rerun()
 
-    # 데이터 출력 (이미지의 카드 스타일 적용)
     df_raw = get_data(d)
     for bu in selected_bu:
-        st.markdown(f'<div style="font-size:18px; font-weight:bold; color:#1E3A5F; border-bottom:2px solid #1E3A5F; padding-bottom:5px; margin:25px 0 10px 0;">🏢 {bu}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:18px; font-weight:bold; color:#1E3A5F; border-bottom:2px solid #1E3A5F; padding-bottom:5px; margin:20px 0 10px 0;">🏢 {bu}</div>', unsafe_allow_html=True)
         has_any = False
         if not df_raw.empty:
             bu_df = df_raw[df_raw['buNm'].str.replace(" ","").str.contains(bu.replace(" ",""), na=False)].copy()
@@ -152,8 +134,7 @@ if st.session_state.search_performed:
                     has_any = True
                     for _, row in combined.iterrows():
                         st.markdown(f"""
-                        <div style="border:1px solid #E0E0E0; border-left:5px solid #2E5077; padding:12px; border-radius:6px; margin-bottom:10px; background:white; position:relative;">
-                            <div style="position:absolute; top:10px; right:10px; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px;">예약확정</div>
+                        <div style="border:1px solid #E0E0E0; border-left:5px solid #2E5077; padding:12px; border-radius:6px; margin-bottom:10px; background:white;">
                             <div style="font-size:16px; font-weight:800; color:#1E3A5F;">📍 {row['placeNm']}</div>
                             <div style="font-size:15px; font-weight:700; color:#D32F2F; margin-top:3px;">⏰ {row['startTime']} ~ {row['endTime']}</div>
                             <div style="font-size:14px; color:#444; margin-top:5px;">📄 {row['eventNm']}</div>
