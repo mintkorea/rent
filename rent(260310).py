@@ -3,12 +3,20 @@ import requests
 import pandas as pd
 from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
+from zoneinfo import ZoneInfo
+
 
 # 1. 페이지 설정 및 세션 초기화
+KST = ZoneInfo("Asia/Seoul")
+
+def today_kst():
+    return datetime.now(KST).date()
+
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 if 'target_date' not in st.session_state:
-    st.session_state.target_date = date.today()
+    st.session_state.target_date = today_kst()
+
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
