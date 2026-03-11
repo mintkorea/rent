@@ -16,7 +16,7 @@ if 'target_date' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# [무한 이동 로직] 링크 클릭 시 날짜 파라미터(?d=) 처리
+# [오늘 수정한 무한 이동 로직]
 params = st.query_params
 if "d" in params:
     try:
@@ -27,20 +27,18 @@ if "d" in params:
             st.rerun()
     except: pass
 
-# 2. CSS 스타일 (어제 원본 100% + 링크 바 밀착 스타일)
+# 2. CSS 스타일 (어제 원본 레이아웃 100% 유지)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 날짜 타이틀 박스 */
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 20px 10px 10px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
         margin-top: 10px;
     }
-    /* [수정] 마지막에 만든 Before/Today/Next 링크 바 */
     .nav-link-bar {
         display: flex !important; width: 100% !important; background: white !important; 
         border: 1px solid #D1D9E6 !important; border-radius: 0 0 10px 10px !important; 
@@ -72,10 +70,10 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<h2 style="text-align:center; color:#1E3A5F;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 
-# 3. 입력부 (어제 소스 그대로)
-target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
-if target_date != st.session_state.target_date:
-    st.session_state.target_date = target_date
+# 3. 입력부 (어제 소스 유지)
+t_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
+if t_date != st.session_state.target_date:
+    st.session_state.target_date = t_date
     st.rerun()
 
 st.markdown('**🏢 건물 선택**')
@@ -90,7 +88,7 @@ show_p = c2.checkbox("기간 대관", value=True, key="chk_p")
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
 
-# 4. 데이터 및 요일 로직 [복구]
+# 4. 로직 함수
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -102,16 +100,14 @@ def get_data(d):
 
 def get_weekday_names(allow_day_str):
     days = {"1":"월", "2":"화", "3":"수", "4":"목", "5":"금", "6":"토", "7":"일"}
-    if not allow_day_str: return ""
     day_list = [days.get(d.strip()) for d in str(allow_day_str).split(",") if days.get(d.strip())]
-    return f"({','.join(day_list)})"
+    return f"({','.join(day_list)})" if day_list else ""
 
 # 5. 결과 출력
 if st.session_state.search_performed:
     d = st.session_state.target_date
     df_raw = get_data(d)
     
-    # [수정] 무한 이동 날짜 계산
     prev_d = (d - timedelta(days=1)).strftime('%Y-%m-%d')
     next_d = (d + timedelta(days=1)).strftime('%Y-%m-%d')
     today_d = today_kst().strftime('%Y-%m-%d')
@@ -120,7 +116,6 @@ if st.session_state.search_performed:
     w_str = ['월','화','수','목','금','토','일'][w_idx]
     w_class = "sat" if w_idx == 5 else ("sun" if w_idx == 6 else "")
     
-    # [위치/이미지 수정] 날짜 박스 + Before/Today/Next 링크 바
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
@@ -144,7 +139,6 @@ if st.session_state.search_performed:
                 p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_p else pd.DataFrame()
                 v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: target_wd in [day.strip() for day in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
                 
-                # 당일 대관 출력
                 if not t_ev.empty:
                     has_content = True
                     st.markdown('<div class="section-title">📌 당일 대관</div>', unsafe_allow_html=True)
@@ -152,7 +146,6 @@ if st.session_state.search_performed:
                         s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                         st.markdown(f"""<div class="event-card"><span class="status-badge {s_cls}">{s_txt}</span><div style="font-size:16px; font-weight:bold; color:#1E3A5F;">📍 {row['placeNm']}</div><div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div><div style="font-size:14px; color:#333;">📄 {row['eventNm']}</div><div class="bottom-info"><span class="period-label">🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div></div>""", unsafe_allow_html=True)
                 
-                # [복구] 기간 대관 및 요일 정보 출력
                 if not v_p_ev.empty:
                     has_content = True
                     st.markdown('<div class="section-title">🗓️ 기간 대관</div>', unsafe_allow_html=True)
