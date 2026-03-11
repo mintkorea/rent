@@ -35,11 +35,11 @@ st.markdown("""
     /* [수정] 메인 제목 줄간격 및 하단 여백 */
     .main-title { 
         font-size: 24px !important; font-weight: 800; text-align: center; 
-        color: #1E3A5F; margin-bottom: 15px !important; line-height: 1.1 !important;
+        color: #1E3A5F; margin-bottom: 13px !important; line-height: 1.1 !important;
     }
     
     /* [수정] 체크박스 간격 촘촘하게 */
-    .stCheckbox { margin-top: -10px !important; margin-bottom: -11px !important; }
+    .stCheckbox { margin-top: -11px !important; margin-bottom: -11px !important; }
     
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
