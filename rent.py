@@ -20,35 +20,38 @@ if "target_date" not in st.session_state:
 if "search_performed" not in st.session_state:
     st.session_state.search_performed = False
 
-# 3. CSS 스타일 (버튼들을 하나로 합치는 디자인)
+# 3. CSS 스타일 (버튼 일체화 및 원본 카드 디자인)
 st.markdown("""
 <style>
     .block-container { padding: 1.5rem 1rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
     .title-box { background-color: #F0F4FA; border: 1px solid #D1D9E6; border-radius: 12px 12px 0 0; padding: 15px; text-align: center; font-size: 20px; font-weight: 800; color: #1E3A5F; margin-top: 30px; }
-    .date-display-box { background-color: #FFFFFF; border: 1px solid #D1D9E6; border-top: none; border-radius: 0 0 12px 12px; padding: 12px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+    .date-display-box { background-color: #FFFFFF; border: 1px solid #D1D9E6; border-top: none; border-radius: 0 0 12px 12px; padding: 12px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
     
     .blue-date { color: #0047FF !important; }
     .red-date { color: #FF0000 !important; }
     .black-date { color: #333333 !important; }
 
-    /* 버튼 간 간격을 0으로 만들고 테두리를 겹쳐 하나처럼 보이게 설정 */
+    /* 버튼 일체화: 틈을 0으로 하고 테두리 공유 */
+    .nav-container { display: flex; justify-content: center; margin-bottom: 20px; }
     div[data-testid="stHorizontalBlock"] { gap: 0px !important; }
     div[data-testid="stHorizontalBlock"] button {
         height: 40px !important;
         border: 1px solid #D1D9E6 !important;
         background-color: white !important;
-        border-radius: 0px !important; /* 각진 버튼으로 일체감 부여 */
+        border-radius: 0px !important;
         margin: 0px !important;
+        width: 100% !important;
     }
-    /* 양쪽 끝 버튼만 둥글게 처리 */
-    div[data-testid="column"]:first-child button { border-radius: 8px 0 0 8px !important; border-right: none !important; }
-    div[data-testid="column"]:last-child button { border-radius: 0 8px 8px 0 !important; border-left: none !important; }
+    /* 왼쪽 버튼 곡률 */
+    div[data-testid="column"]:nth-child(2) button { border-radius: 8px 0 0 8px !important; border-right: none !important; }
+    /* 오른쪽 버튼 곡률 */
+    div[data-testid="column"]:nth-child(4) button { border-radius: 0 8px 8px 0 !important; border-left: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 입력부
+# 4. 상단 입력 UI (원본 유지)
 st.markdown('<h2 style="text-align:center;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
@@ -63,7 +66,7 @@ show_period = st.checkbox("기간 대관", value=True)
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
 
-# 5. 데이터 로직
+# 5. 데이터 로직 (캐싱 적용)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -73,28 +76,31 @@ def get_data(d):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 6. 결과 출력
+# 6. 결과 출력 영역
 if st.session_state.search_performed:
     d = st.session_state.target_date
-    w_idx = d.weekday()
+    w_idx = d.weekday() # 월:0, 일:6
+    w_api = str(w_idx + 1) # API allowDay 기준 (월:1, 일:7)
     w_str = ['월','화','수','목','금','토','일'][w_idx]
+    
     c_cls = "blue-date" if w_idx == 5 else ("red-date" if w_idx == 6 or is_holiday(d) else "black-date")
 
+    # 상단 날짜 박스
     st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="date-display-box {c_cls}">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
     
-    # [디자인 수정] 버튼들을 하나처럼 보이게 밀착 배치
-    c1, c2, c3 = st.columns([1, 4, 1])
-    with c1:
-        if st.button("◀", use_container_width=True, key="mv_p"):
+    # 버튼 일체화 레이아웃
+    _, col_l, col_m, col_r, _ = st.columns([1.5, 0.4, 1.2, 0.4, 1.5])
+    with col_l:
+        if st.button("◀", key="p_v"):
             st.session_state.target_date -= timedelta(days=1)
             st.rerun()
-    with c2:
-        if st.button("오늘", use_container_width=True, key="mv_t"):
+    with col_m:
+        if st.button("오늘", key="t_v"):
             st.session_state.target_date = today_kst()
             st.rerun()
-    with c3:
-        if st.button("▶", use_container_width=True, key="mv_n"):
+    with col_r:
+        if st.button("▶", key="n_v"):
             st.session_state.target_date += timedelta(days=1)
             st.rerun()
 
@@ -105,20 +111,26 @@ if st.session_state.search_performed:
         has_any = False
         if not df_raw.empty:
             bu_df = df_raw[df_raw['buNm'].str.replace(" ","").str.contains(bu.replace(" ",""), na=False)].copy()
+            
             if not bu_df.empty:
+                # 당일 대관: 시작일과 종료일이 같은 경우
                 t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
-                p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
-                v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: str(w_idx+1) in [i.strip() for i in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
                 
-                combined = pd.concat([t_ev, v_p_ev]).sort_values(by='startTime')
+                # 기간 대관: 시작일과 종료일이 다른 경우 + allowDay 요일 체크
+                p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
+                
+                # allowDay 필터링 (원본 소스 로직 복구: 콤마 분리 후 현재 요일 포함 여부 확인)
+                if not p_ev.empty:
+                    p_ev = p_ev[p_ev['allowDay'].apply(lambda x: w_api in [i.strip() for i in str(x).split(",")])]
+                
+                combined = pd.concat([t_ev, p_ev]).sort_values(by='startTime')
+                
                 if not combined.empty:
                     has_any = True
                     for _, row in combined.iterrows():
-                        # [핵심 수정] 부서명 필드 mgDeptNm 적용
-                        dept_text = row.get('mgDeptNm')
-                        if not dept_text or str(dept_text).strip() == '':
-                            dept_text = row.get('deptNm', row.get('regUserNm', '정보없음'))
-
+                        # 부서명 mgDeptNm 적용
+                        d_name = row.get('mgDeptNm', row.get('deptNm', '정보없음'))
+                        
                         st.markdown(f"""
                         <div style="border:1px solid #E0E0E0; border-left:8px solid #2E5077; padding:15px; border-radius:8px; margin-bottom:12px; background:white; position:relative;">
                             <div style="position:absolute; top:12px; right:12px; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px;">예약확정</div>
@@ -127,9 +139,12 @@ if st.session_state.search_performed:
                             <div style="font-size:14px; color:#333; margin-bottom:12px; line-height:1.4;">📄 {row['eventNm']}</div>
                             <div style="border-top:1px solid #F0F0F0; padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#666;">
                                 <span>📅 {row['startDt']}</span>
-                                <span>👤 {dept_text}</span>
+                                <span>👤 {d_name}</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
+        
         if not has_any:
             st.markdown('<div style="color:#999; font-size:13px; padding:20px; text-align:center; background:#FAFAFA; border:1px dashed #DDD; border-radius:10px;">조회된 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+
+    st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
