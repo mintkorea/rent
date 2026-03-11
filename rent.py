@@ -11,13 +11,13 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- [핵심] 세션 및 URL 파라미터 강제 동기화 ---
+# --- 세션 상태 관리 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# URL에 날짜가 있으면(Next, Before, Today 클릭 시) 무조건 결과 노출
+# URL 파라미터(Next, Before, Today) 대응
 url_params = st.query_params
 if "d" in url_params:
     try:
@@ -27,7 +27,7 @@ if "d" in url_params:
     except:
         pass
 
-# 2. CSS 스타일
+# 2. CSS 스타일 (동일 유지)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -78,14 +78,13 @@ with st.form("search_form"):
     
     submit = st.form_submit_button("🔍 검색하기", use_container_width=True)
     if submit:
-        # 검색 시 URL에 결과 위치(#result)를 강제로 붙여서 페이지를 새로고침함
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
+        # 검색 시 쿼리 파라미터를 초기화하고 새로고침하여 스크롤 유도
         st.query_params.clear()
-        st.query_params["s"] = "1" # 검색 실행 알림용 파라미터
         st.rerun()
 
-# 4. 데이터 로직 (생략 없음)
+# 4. 데이터 로직 (캐시 적용)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -95,21 +94,17 @@ def get_data(d):
         return pd.DataFrame(res.json().get('res', [])) if res.status_code == 200 else pd.DataFrame()
     except: return pd.DataFrame()
 
-def get_weekday_names(allow_day_str):
-    days = {"1":"월", "2":"화", "3":"수", "4":"목", "5":"금", "6":"토", "7":"일"}
-    day_list = [days.get(d.strip()) for d in str(allow_day_str).split(",") if days.get(d.strip())]
-    return f"({','.join(day_list)})" if day_list else ""
-
-# 5. 결과 출력
+# 5. 결과 출력부
 if st.session_state.search_performed:
-    st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
+    # [가장 중요한 부분] 앵커 지점
+    st.markdown('<div id="result-anchor" style="margin-bottom: 20px;"></div>', unsafe_allow_html=True)
     
-    # [핵심 수술] TOP 버튼 후 검색 시에도 무조건 스크롤되도록 JavaScript 강제 주입
+    # TOP 버튼 누른 후에도 무조건 내려가도록 하는 스크립트 (중복 보장)
     components.html("""
         <script>
             setTimeout(function() {
-                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
-            }, 100);
+                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'auto', block: 'start'});
+            }, 10);
         </script>
     """, height=0)
 
@@ -132,6 +127,7 @@ if st.session_state.search_performed:
     </div>
     """, unsafe_allow_html=True)
 
+    # ... (이하 건물별 데이터 출력 로직 동일) ...
     target_wd = str(d.weekday() + 1)
     for bu in selected_bu_list:
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
@@ -149,8 +145,7 @@ if st.session_state.search_performed:
                         st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
                         for _, row in ev_df.sort_values(by='startTime').iterrows():
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                            day_info = get_weekday_names(row['allowDay']) if title == "🗓️ 기간 대관" else ""
-                            period = f"{row['startDt']} ~ {row['endDt']} {day_info}" if title == "🗓️ 기간 대관" else row['startDt']
+                            period = f"{row['startDt']} ~ {row['endDt']}" if title == "🗓️ 기간 대관" else row['startDt']
                             st.markdown(f"""
                             <div class="event-card">
                                 <span class="status-badge {s_cls}">{s_txt}</span>
