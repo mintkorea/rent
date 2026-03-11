@@ -5,27 +5,25 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정 및 시간대
+# 1. 페이지 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 상태 및 URL 파라미터 동기화 (핵심!) ---
+# --- [핵심] 세션 및 URL 파라미터 강제 동기화 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# URL 파라미터가 있으면 세션 상태를 강제로 업데이트하고 검색 실행 상태로 변경
+# URL에 날짜가 있으면(Next, Before, Today 클릭 시) 무조건 결과 노출
 url_params = st.query_params
 if "d" in url_params:
     try:
         url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
-        # URL 날짜가 세션과 다르거나 아직 검색 전이라면 강제 활성화
-        if st.session_state.target_date != url_d or not st.session_state.search_performed:
-            st.session_state.target_date = url_d
-            st.session_state.search_performed = True
+        st.session_state.target_date = url_d
+        st.session_state.search_performed = True
     except:
         pass
 
@@ -36,9 +34,7 @@ st.markdown("""
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
-    .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
-    .sat { color: #0000FF !important; }
-    .sun { color: #FF0000 !important; }
+    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; line-height: 1.2 !important;
@@ -82,11 +78,14 @@ with st.form("search_form"):
     
     submit = st.form_submit_button("🔍 검색하기", use_container_width=True)
     if submit:
+        # 검색 시 URL에 결과 위치(#result)를 강제로 붙여서 페이지를 새로고침함
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
         st.query_params.clear()
+        st.query_params["s"] = "1" # 검색 실행 알림용 파라미터
+        st.rerun()
 
-# 4. 데이터 로직
+# 4. 데이터 로직 (생략 없음)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -103,19 +102,20 @@ def get_weekday_names(allow_day_str):
 
 # 5. 결과 출력
 if st.session_state.search_performed:
-    st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
     
-    # [핵심] 앵커 위치로 부드럽게 이동
+    # [핵심 수술] TOP 버튼 후 검색 시에도 무조건 스크롤되도록 JavaScript 강제 주입
     components.html("""
         <script>
-            window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+            setTimeout(function() {
+                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+            }, 100);
         </script>
     """, height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
     
-    # 버튼용 날짜 설정 (Today 포함)
     prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
