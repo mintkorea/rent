@@ -4,33 +4,36 @@ import pandas as pd
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-# 1. 한국 시간 설정
+# 한국시간
 KST = ZoneInfo("Asia/Seoul")
-def today_kst(): 
+
+def today_kst():
     return datetime.now(KST).date()
 
 def is_holiday(d):
-    holidays = [(1,1),(3,1),(5,5),(6,6),(8,15),(10,3),(10,9),(12,25)]
+    holidays=[(1,1),(3,1),(5,5),(6,6),(8,15),(10,3),(10,9),(12,25)]
     return (d.month,d.day) in holidays
 
-# 2. 페이지 설정
-st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
+
+# 페이지 설정
+st.set_page_config(page_title="성의교정 대관 조회",layout="centered")
 
 if "target_date" not in st.session_state:
-    st.session_state.target_date = today_kst()
+    st.session_state.target_date=today_kst()
 
-# 3. CSS
+
+# CSS
 st.markdown("""
 <style>
 
-.block-container {
+.block-container{
  padding:1rem 0.5rem !important;
  max-width:500px !important;
 }
 
-header {visibility:hidden;}
+header{visibility:hidden;}
 
-div[data-testid="stVerticalBlock"] > div {
+div[data-testid="stVerticalBlock"]>div{
  padding:0px !important;
  margin:0px !important;
 }
@@ -40,7 +43,7 @@ p,label{
  line-height:1.2 !important;
 }
 
-.stCheckbox {margin-bottom:-5px !important;}
+.stCheckbox{margin-bottom:-5px !important;}
 
 .title-box{
  background:#F0F4FA;
@@ -96,31 +99,25 @@ p,label{
  color:#666;
 }
 
-/* 모바일에서도 화살표 한 줄 유지 */
-@media (max-width:600px){
- div[data-testid="stHorizontalBlock"]{
-  flex-wrap:nowrap !important;
- }
-}
-
 </style>
-""", unsafe_allow_html=True)
+""",unsafe_allow_html=True)
 
-# 4. 상단
-st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<h3 style="text-align:center;">🏫 성의교정 시설 대관 현황</h3>', unsafe_allow_html=True)
 
-st.session_state.target_date = st.date_input(
+# 상단
+st.markdown('<div id="top-anchor"></div>',unsafe_allow_html=True)
+st.markdown('<h3 style="text-align:center;">🏫 성의교정 시설 대관 현황</h3>',unsafe_allow_html=True)
+
+st.session_state.target_date=st.date_input(
  "날짜",
  value=st.session_state.target_date,
  label_visibility="collapsed"
 )
 
-# 건물 선택
+
+# 건물선택
 st.markdown("**🏢 건물 선택**")
 
-selected_bu = [
-b for b in [
+selected_bu=[b for b in [
 "성의회관",
 "의생명산업연구원",
 "옴니버스 파크",
@@ -128,24 +125,26 @@ b for b in [
 "옴니버스 파크 간호대학",
 "대학본관",
 "서울성모별관"
-]
-if st.checkbox(b, value=(b in ["성의회관","의생명산업연구원"]), key=f"cb_{b}")
-]
+] if st.checkbox(b,value=(b in ["성의회관","의생명산업연구원"]),key=f"cb_{b}")]
 
-# 대관 유형
+
+# 대관유형
 st.markdown("**🗓️ 대관 유형 선택**")
 
-show_today = st.checkbox("당일 대관",value=True)
-show_period = st.checkbox("기간 대관",value=True)
+show_today=st.checkbox("당일 대관",value=True)
+show_period=st.checkbox("기간 대관",value=True)
 
+
+# 검색
 if st.button("🔍 검색하기",use_container_width=True,type="primary"):
- st.session_state.search_performed=True
- st.components.v1.html(
- "<script>window.parent.document.getElementById('result-target').scrollIntoView({behavior:'smooth'});</script>",
- height=0
- )
+    st.session_state.search_performed=True
+    st.components.v1.html(
+    "<script>window.parent.document.getElementById('result-target').scrollIntoView({behavior:'smooth'});</script>",
+    height=0
+    )
 
-# 5. API
+
+# API
 @st.cache_data(ttl=300)
 def get_data(d):
 
@@ -163,8 +162,10 @@ def get_data(d):
  except:
   return pd.DataFrame()
 
-# 6. 결과
+
+# 결과 anchor
 st.markdown('<div id="result-target"></div>',unsafe_allow_html=True)
+
 
 if st.session_state.get("search_performed"):
 
@@ -173,30 +174,38 @@ if st.session_state.get("search_performed"):
  w_str=['월','화','수','목','금','토','일'][w_idx]
 
  st.markdown('<div class="title-box">성의교정 대관 현황</div>',unsafe_allow_html=True)
+
  st.markdown(
  f'<div class="date-display-box">{d.strftime("%Y.%m.%d")}.({w_str})</div>',
  unsafe_allow_html=True
  )
 
- # 화살표 버튼
- prev,today_btn,next=st.columns([1,1,1],gap="small")
 
- with prev:
-  if st.button("◀",key="p_nav",use_container_width=True):
-   st.session_state.target_date-=timedelta(days=1)
-   st.rerun()
+ # 화살표 버튼 (안정형)
+ nav=st.container()
 
- with today_btn:
-  if st.button("오늘",key="t_nav",use_container_width=True):
-   st.session_state.target_date=today_kst()
-   st.rerun()
+ with nav:
 
- with next:
-  if st.button("▶",key="n_nav",use_container_width=True):
-   st.session_state.target_date+=timedelta(days=1)
-   st.rerun()
+  col1,col2,col3=st.columns([1,1,1])
+
+  with col1:
+   if st.button("◀",key="p_nav",use_container_width=True):
+    st.session_state.target_date-=timedelta(days=1)
+    st.rerun()
+
+  with col2:
+   if st.button("오늘",key="t_nav",use_container_width=True):
+    st.session_state.target_date=today_kst()
+    st.rerun()
+
+  with col3:
+   if st.button("▶",key="n_nav",use_container_width=True):
+    st.session_state.target_date+=timedelta(days=1)
+    st.rerun()
+
 
  df_raw=get_data(st.session_state.target_date)
+
 
  for bu in selected_bu:
 
@@ -242,9 +251,12 @@ if st.session_state.get("search_performed"):
      """,unsafe_allow_html=True)
 
   if not has_any:
+
    st.markdown(
    '<div style="color:#999;font-size:12px;padding:15px;text-align:center;background:#FAFAFA;border:1px dashed #DDD;border-radius:10px;">내역 없음</div>',
    unsafe_allow_html=True)
+
+
 
 # 플로팅 TOP 버튼
 st.components.v1.html("""
@@ -270,4 +282,4 @@ onclick="window.parent.document.getElementById('top-anchor').scrollIntoView({beh
  box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 </style>
-""",height=0)
+""",height=60)
