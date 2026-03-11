@@ -5,18 +5,19 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정
+# 1. 환경 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 및 파라미터 관리 ---
+# --- 세션 및 파라미터 제어 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
+# 네비게이션 버튼(Today 등) 클릭 시 즉시 반영
 url_params = st.query_params
 if "d" in url_params:
     try:
@@ -25,30 +26,36 @@ if "d" in url_params:
         st.session_state.search_performed = True
     except: pass
 
-# 2. CSS 스타일
+# 2. CSS 디자인 (사진 image_e0f4e3.png의 UI 반영)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
+    
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 15px !important; line-height: 1.1 !important; }
     .stCheckbox { margin-top: -10px !important; margin-bottom: -12px !important; }
     
+    /* 상단 날짜 박스 */
     .date-display-box { text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; }
     .res-main-title { font-size: 20px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 4px; }
     .res-sub-title { font-size: 18px !important; font-weight: 700; color: #333; }
     .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
 
+    /* 네비게이션 바 */
     .nav-link-bar { display: flex !important; width: 100% !important; background: white !important; border: 1px solid #D1D9E6 !important; border-radius: 0 0 10px 10px !important; margin-bottom: 25px !important; overflow: hidden !important; }
     .nav-item { flex: 1 !important; text-align: center !important; padding: 10px 0 !important; text-decoration: none !important; color: #1E3A5F !important; font-weight: bold !important; border-right: 1px solid #F0F0F0 !important; font-size: 13px !important; }
     .nav-item:last-child { border-right: none !important; }
 
+    /* 카드 스타일 (아이콘 포함 UI 반영) */
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
-    .status-badge { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
-    .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
-    .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; flex-direction: column; border-top: 1px solid #f0f0f0; padding-top: 6px; gap: 2px; }
-    .info-row { display: flex; justify-content: space-between; }
+    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; position: relative; }
+    .status-badge { position: absolute; top: 12px; right: 14px; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; background-color: #FFF4E5; color: #B25E09; }
+    
+    .card-row { display: flex; align-items: flex-start; margin-bottom: 4px; line-height: 1.4; }
+    .card-icon { margin-right: 8px; font-size: 16px; }
+    .card-label { font-size: 14px; font-weight: bold; color: #333; }
+    .card-value { font-size: 14px; color: #444; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -64,8 +71,7 @@ with st.form("search_form"):
     st.markdown('**🗓️ 대관 유형**')
     c1, c2 = st.columns(2)
     show_t, show_p = c1.checkbox("당일", value=True), c2.checkbox("기간", value=True)
-    submit = st.form_submit_button("🔍 검색하기", use_container_width=True)
-    if submit:
+    if st.form_submit_button("🔍 검색하기", use_container_width=True):
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
         st.query_params.clear()
@@ -116,20 +122,16 @@ if st.session_state.search_performed:
                         has_content = True
                         st.markdown(f'<div style="font-size:15px; font-weight:bold; color:#555; margin:10px 0 6px 0; padding-left:5px; border-left:4px solid #ccc;">{title}</div>', unsafe_allow_html=True)
                         for _, row in ev_df.sort_values(by='startTime').iterrows():
-                            s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                             day_info = get_weekday_names(row['allowDay']) if title == "🗓️ 기간 대관" else ""
-                            # [추가] 대관 일정 텍스트 생성
                             date_range = f"{row['startDt']} ~ {row['endDt']} {day_info}"
                             st.markdown(f"""
                             <div class="event-card">
-                                <span class="status-badge {s_cls}">{s_txt}</span>
-                                <div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div>
-                                <div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                                <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
-                                <div class="bottom-info">
-                                    <div class="info-row"><strong>📅 대관일정:</strong> <span>{date_range}</span></div>
-                                    <div class="info-row"><strong>👥 주관부서:</strong> <span>{row['mgDeptNm']}</span></div>
-                                </div>
+                                <span class="status-badge">예약확정</span>
+                                <div class="card-row" style="margin-bottom:8px;"><span class="card-icon">📍</span><span style="font-size:16px; font-weight:bold; color:#1E3A5F;">{row['placeNm']}</span></div>
+                                <div class="card-row"><span class="card-icon">⏰</span><span class="card-label">시간:</span>&nbsp;<span style="color:#FF4B4B; font-weight:bold;">{row['startTime']} ~ {row['endTime']}</span></div>
+                                <div class="card-row"><span class="card-icon">📅</span><span class="card-label">일정:</span>&nbsp;<span class="card-value">{date_range}</span></div>
+                                <div class="card-row"><span class="card-icon">📝</span><span class="card-label">행사:</span>&nbsp;<span class="card-value"><strong>{row['eventNm']}</strong></span></div>
+                                <div class="card-row" style="margin-top:4px; border-top:1px solid #f0f0f0; padding-top:4px;"><span class="card-icon">👥</span><span class="card-label">주관:</span>&nbsp;<span class="card-value">{row['mgDeptNm']}</span></div>
                             </div>
                             """, unsafe_allow_html=True)
         if not has_content:
