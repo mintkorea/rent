@@ -18,71 +18,57 @@ st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 if "target_date" not in st.session_state:
     st.session_state.target_date = today_kst()
 
-# 3. CSS (원본 보존 + 카드형 버튼바 + 플로팅 버튼)
+# 3. CSS (원본 디자인 + 모바일 강제 한 줄 고정 + 플로팅 탑)
 st.markdown("""
 <style>
-    /* 상단 앵커 위치 조절 */
-    #top-link { position: absolute; top: -100px; }
-
     .block-container { padding: 1rem 0.5rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 줄간격 및 박스 (image_f05d81 참조) */
+    /* 원본 디자인 유지 */
     div[data-testid="stVerticalBlock"] > div { padding: 0px !important; margin: 0px !important; }
-    p, label { margin: 0px !important; line-height: 1.2 !important; }
-
     .title-box { background-color: #F0F4FA; border: 1px solid #D1D9E6; border-radius: 12px 12px 0 0; padding: 10px; text-align: center; font-weight: 800; color: #1E3A5F; margin-top: 10px; }
     .date-display-box { background-color: #FFFFFF; border: 1px solid #D1D9E6; border-top: none; border-radius: 0 0 12px 12px; padding: 10px; text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 5px; }
 
-    /* [수정] 카드 형태의 버튼 바 컨테이너 (image_ef7d04 스타일) */
-    .nav-card {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        background: white;
-        border: 1px solid #D1D9E6;
-        border-radius: 10px;
-        padding: 8px;
-        margin: 10px 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* [핵심] 모바일에서도 절대 깨지지 않는 한 줄 버튼바 */
+    .nav-wrapper {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        margin: 10px 0 !important;
+        width: 100%;
+    }
+    .nav-wrapper button {
+        flex: 1 !important;
+        max-width: 120px !important;
+        height: 40px !important;
+        background: white !important;
+        border: 1px solid #D1D9E6 !important;
+        border-radius: 8px !important;
+        cursor: pointer;
     }
 
-    /* 카드 내부 버튼 스타일 강제 고정 */
-    div[data-testid="column"] button {
-        border: 1px solid #E0E0E0 !important;
-        background: #F9FAFB !important;
-        border-radius: 6px !important;
-        min-width: 60px !important;
-    }
-
-    /* 결과 카드 디자인 (image_f0c793 참조) */
+    /* 카드 디자인 */
     .event-card { border:1px solid #E0E0E0; border-left:8px solid #2E5077; padding:10px; border-radius:10px; margin-bottom:10px; background:white; position:relative; }
     .status-badge { position:absolute; top:10px; right:10px; background:#FFF3E0; color:#E65100; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px; }
     .event-footer { border-top:1px solid #F0F0F0; padding-top:6px; display:flex; justify-content:space-between; font-size:11px; color:#666; }
 
-    /* 플로팅 탑버튼 (CSS 기반) */
-    .floating-top {
-        position: fixed;
-        bottom: 25px;
-        right: 20px;
-        width: 45px;
-        height: 45px;
-        background-color: #2E5077;
-        color: white !important;
-        border-radius: 50%;
-        text-align: center;
-        line-height: 45px;
-        font-size: 20px;
-        text-decoration: none !important;
-        z-index: 9999;
+    /* 확실한 플로팅 탑버튼 */
+    #floating-top {
+        position: fixed; bottom: 25px; right: 20px;
+        background: #2E5077; color: white !important;
+        width: 45px; height: 45px; border-radius: 50%;
+        text-align: center; line-height: 45px; font-size: 20px;
+        z-index: 999999; cursor: pointer; border: none;
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        font-weight: bold;
+        display: block; text-decoration: none;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # 4. 상단 UI
-st.markdown('<div id="top"></div>', unsafe_allow_html=True) # 탑 버튼용 앵커
+st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<h3 style="text-align:center;">🏫 성의교정 시설 대관 현황</h3>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
@@ -107,6 +93,7 @@ def get_data(d):
     except: return pd.DataFrame()
 
 # 6. 결과 출력
+st.markdown('<div id="result-target"></div>', unsafe_allow_html=True)
 if st.session_state.get("search_performed"):
     d = st.session_state.target_date
     w_idx = d.weekday()
@@ -116,21 +103,22 @@ if st.session_state.get("search_performed"):
     st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="date-display-box {c_cls}">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
     
-    # [해결] 버튼 세 개를 카드 형태의 셀 안에 배치 (모바일 깨짐 방지 레이아웃)
-    with st.container():
-        c1, c2, c3 = st.columns([1, 1, 1])
-        with c1:
-            if st.button("◀", key="p_v2"):
-                st.session_state.target_date -= timedelta(days=1)
-                st.rerun()
-        with c2:
-            if st.button("오늘", key="t_v2"):
-                st.session_state.target_date = today_kst()
-                st.rerun()
-        with c3:
-            if st.button("▶", key="n_v2"):
-                st.session_state.target_date += timedelta(days=1)
-                st.rerun()
+    # [해결] st.columns를 버리고 CSS flexbox를 직접 사용 (key를 다르게 설정하여 중복 방지)
+    st.markdown('<div class="nav-wrapper">', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c1:
+        if st.button("◀", key="m_prev"):
+            st.session_state.target_date -= timedelta(days=1)
+            st.rerun()
+    with c2:
+        if st.button("오늘", key="m_today"):
+            st.session_state.target_date = today_kst()
+            st.rerun()
+    with c3:
+        if st.button("▶", key="m_next"):
+            st.session_state.target_date += timedelta(days=1)
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     df_raw = get_data(st.session_state.target_date)
     for bu in selected_bu:
@@ -161,6 +149,17 @@ if st.session_state.get("search_performed"):
         if not has_any:
             st.markdown('<div style="color:#999; font-size:12px; padding:15px; text-align:center; background:#FAFAFA; border:1px dashed #DDD; border-radius:10px;">내역 없음</div>', unsafe_allow_html=True)
 
-    # 하단 여백 및 탑버튼 (HTML 앵커 방식)
-    st.markdown('<br><br><br>', unsafe_allow_html=True)
-    st.markdown('<a href="#top" class="floating-top">▲</a>', unsafe_allow_html=True)
+    # 플로팅 버튼 (가장 확실한 JS 스크롤 방식)
+    st.components.v1.html("""
+        <button id="floating-top" onclick="window.parent.document.getElementById('top-anchor').scrollIntoView({behavior:'smooth'});">▲</button>
+        <style>
+            #floating-top {
+                position: fixed; bottom: 25px; right: 20px;
+                background: #2E5077; color: white;
+                width: 45px; height: 45px; border-radius: 50%;
+                text-align: center; line-height: 45px; font-size: 20px;
+                z-index: 999999; cursor: pointer; border: none;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            }
+        </style>
+    """, height=0)
