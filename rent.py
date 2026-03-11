@@ -11,11 +11,12 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- [수정] 날짜 이동 핵심 로직 (레이아웃 파괴 없이 적용) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
+if 'search_performed' not in st.session_state:
+    st.session_state.search_performed = False
 
-# URL 파라미터를 읽어서 세션 날짜를 업데이트 (무한 이동 가능)
+# --- [오늘 수정한 무한 이동 로직] ---
 params = st.query_params
 if "d" in params:
     try:
@@ -25,11 +26,9 @@ if "d" in params:
             st.session_state.search_performed = True
             st.rerun()
     except: pass
+# -----------------------------------
 
-if 'search_performed' not in st.session_state:
-    st.session_state.search_performed = False
-
-# 2. CSS 스타일 (사용자님 원본 소스 100% 유지)
+# 2. CSS 스타일 (어제 소스 100% 동일)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -49,12 +48,7 @@ st.markdown("""
     .sub-label { font-size: 18px !important; font-weight: 800; color: #2E5077; margin-top: 5px !important; display: block; }
     .building-header { font-size: 19px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 16px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
-    .event-card { 
-        border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
-        padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; 
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; 
-        line-height: 1.4 !important; 
-    }
+    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); background-color: #ffffff; line-height: 1.4 !important; }
     .place-name { font-size: 16px; font-weight: bold; color: #1E3A5F; margin-bottom: 4px; }
     .time-row { font-size: 15px; font-weight: bold; color: #FF4B4B; margin: 4px 0; }
     .event-name { font-size: 14px; color: #333; font-weight: 500; margin-top: 6px; }
@@ -69,25 +63,25 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (사용자님 원본 그대로)
+# 3. 입력 UI (어제 소스 그대로)
 st.markdown('<span class="sub-label">📅 날짜 선택</span>', unsafe_allow_html=True)
-target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
-if target_date != st.session_state.target_date:
-    st.session_state.target_date = target_date
+t_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
+if t_date != st.session_state.target_date:
+    st.session_state.target_date = t_date
     st.rerun()
 
 st.markdown('<span class="sub-label">🏢 건물 선택</span>', unsafe_allow_html=True)
-ALL_BUILDINGS = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-selected_bu = [b for b in ALL_BUILDINGS if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"vf_{b}")]
+ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+selected_bu = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"v_{b}")]
 
 st.markdown('<span class="sub-label">🗓️ 대관 유형 선택</span>', unsafe_allow_html=True)
-show_today = st.checkbox("당일 대관", value=True, key="chk_t")
-show_period = st.checkbox("기간 대관", value=True, key="chk_p")
+show_t = st.checkbox("당일 대관", value=True, key="chk_t")
+show_p = st.checkbox("기간 대관", value=True, key="chk_p")
 
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
 
-# 4. 데이터 로직 (생략 - 사용자님 원본 동일)
+# 4. 데이터 로직 (어제 소스 동일)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -97,14 +91,14 @@ def get_data(d):
         return pd.DataFrame(res.json().get('res', []))
     except: return pd.DataFrame()
 
-# 5. 결과 출력 (화살표 링크에 '무한 이동' 파라미터 적용)
+# 5. 결과 출력 (어제 레이아웃 + 오늘 수정한 화살표 로직 적용)
 if st.session_state.search_performed:
     d = st.session_state.target_date
     df_raw = get_data(d)
     
-    # [수정] 화살표 링크에 날짜 파라미터 ?d=YYYY-MM-DD 적용
-    prev_date = (d - timedelta(days=1)).strftime('%Y-%m-%d')
-    next_date = (d + timedelta(days=1)).strftime('%Y-%m-%d')
+    # [수정] 오늘 수정한 무한 이동 주소 적용
+    prev_d = (d - timedelta(days=1)).strftime('%Y-%m-%d')
+    next_d = (d + timedelta(days=1)).strftime('%Y-%m-%d')
     
     w_idx = d.weekday()
     w_str = ['월','화','수','목','금','토','일'][w_idx]
@@ -114,25 +108,27 @@ if st.session_state.search_performed:
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
         <div class="date-row">
-            <a href="./?d={prev_date}" target="_self" class="nav-arrow">←</a>
+            <a href="./?d={prev_d}" target="_self" class="nav-arrow">←</a>
             <span class="res-sub-title">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
-            <a href="./?d={next_date}" target="_self" class="nav-arrow">→</a>
+            <a href="./?d={next_d}" target="_self" class="nav-arrow">→</a>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # 이후 데이터 출력 로직 (사용자님 원본 소스 동일...)
-    # [생략된 카드 출력 로직은 사용자님의 어제 최종본과 100% 동일하게 작동합니다]
-    target_weekday = str(d.weekday() + 1)
+    # 스크롤 이동
+    components.html(f"<script>var el = window.parent.document.getElementById('btn-anchor'); if (el) {{ el.scrollIntoView({{behavior: 'smooth', block: 'start'}}); }}</script>", height=0)
+
+    # 데이터 카드 출력 (어제 소스 100% 동일)
+    target_wd = str(d.weekday() + 1)
     for bu in selected_bu:
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
         has_content = False
         if not df_raw.empty:
             bu_df = df_raw[df_raw['buNm'].str.replace(" ", "").str.contains(bu.replace(" ", ""), na=False)].copy()
             if not bu_df.empty:
-                t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
-                p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
-                v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: target_weekday in [day.strip() for day in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
+                t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_t else pd.DataFrame()
+                p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_p else pd.DataFrame()
+                v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: target_wd in [day.strip() for day in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
                 
                 for ev_df, title in [(t_ev, "📌 당일 대관"), (v_p_ev, "🗓️ 기간 대관")]:
                     if not ev_df.empty:
