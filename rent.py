@@ -39,7 +39,7 @@ st.markdown("""
     }
     
     /* [수정] 체크박스 간격 촘촘하게 */
-    .stCheckbox { margin-top: -10px !important; margin-bottom: -13px !important; }
+    .stCheckbox { margin-top: -10px !important; margin-bottom: -11px !important; }
     
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
