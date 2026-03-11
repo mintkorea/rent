@@ -84,17 +84,6 @@ if st.session_state.search_done:
     st.markdown(f'<div class="date-display-box">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
 
     # [핵심] 모바일에서도 한 줄로 고정되는 버튼바
-
-# 5. [해결] HTML로 만든 가로 3개 셀 (링크 방식)
-# 버튼을 누르면 URL 파라미터를 통해 페이지를 새로고침하며 날짜를 바꿉니다.
-st.markdown(f"""
-    <div class="nav-card-container">
-        <a href="./?nav=prev" target="_self" class="nav-cell">◀</a>
-        <a href="./?nav=today" target="_self" class="nav-cell">오늘</a>
-        <a href="./?nav=next" target="_self" class="nav-cell">▶</a>
-    </div>
-""", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("◀", key="prev"):
