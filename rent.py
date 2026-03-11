@@ -1,64 +1,33 @@
 import streamlit as st
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
+import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# ---------------------------------
-# 1. 한국 시간 설정
-# ---------------------------------
+
+# 1. 페이지 설정 및 세션 초기화
 KST = ZoneInfo("Asia/Seoul")
 
 def today_kst():
     return datetime.now(KST).date()
 
-# ---------------------------------
-# 2. 페이지 설정
-# ---------------------------------
-st.set_page_config(
-    page_title="성의교정 대관 조회",
-    layout="centered"
-)
+st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-st.title("성의교정 대관 조회")
-
-# ---------------------------------
-# 3. 세션 상태 초기화
-# ---------------------------------
-if "target_date" not in st.session_state:
+if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 
-if "search_performed" not in st.session_state:
+if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# ---------------------------------
-# 4. 날짜 이동 UI
-# ---------------------------------
-col1, col2, col3, col4 = st.columns([1,2,1,1])
-
-with col1:
-    if st.button("⬅ 이전"):
-        st.session_state.target_date -= timedelta(days=1)
-        st.session_state.search_performed = True
-
-with col2:
-    selected_date = st.date_input(
-        "조회 날짜",
-        value=st.session_state.target_date
-    )
-    st.session_state.target_date = selected_date
-
-with col3:
-    if st.button("다음 ➡"):
-        st.session_state.target_date += timedelta(days=1)
-        st.session_state.search_performed = True
-
-with col4:
-    if st.button("오늘"):
-        st.session_state.target_date = today_kst()
-        st.session_state.search_performed = True
-
-st.divider()
+# [화살표 로직] 날짜 이동 시 상태 유지
+params = st.query_params
+if "nav" in params:
+    if params["nav"] == "prev": st.session_state.target_date -= timedelta(days=1)
+    if params["nav"] == "next": st.session_state.target_date += timedelta(days=1)
+    st.session_state.search_performed = True 
+    st.query_params.clear()
+    st.rerun()
 
 # 2. CSS 스타일 (메인 유지 + 카드 줄간격 1.4 최적화)
 st.markdown("""
