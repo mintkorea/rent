@@ -4,33 +4,34 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
+import time
 
-# 1. 페이지 설정 및 시간대 정의
+# 1. 페이지 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- [핵심 수정] URL 파라미터 처리 로직 (최상단 배치) ---
+# --- URL 파라미터 및 세션 관리 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
+if 'scroll_trigger' not in st.session_state:
+    st.session_state.scroll_trigger = 0
 
-# URL에서 날짜(?d=YYYY-MM-DD)를 읽어와 세션 상태 업데이트
 query_params = st.query_params
 if "d" in query_params:
     try:
         url_date = datetime.strptime(query_params["d"], "%Y-%m-%d").date()
-        # 현재 세션 날짜와 URL 날짜가 다르면 강제 업데이트 후 조회 상태로 전환
         if st.session_state.target_date != url_date:
             st.session_state.target_date = url_date
             st.session_state.search_performed = True
+            st.session_state.scroll_trigger += 1 # 이동 시에도 스크롤 트리거 작동
     except:
         pass
-# ---------------------------------------------------
 
-# 2. CSS 스타일
+# 2. CSS 스타일 (동일 유지)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -40,15 +41,12 @@ st.markdown("""
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
-    
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
-        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
-        line-height: 1.2 !important;
+        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; line-height: 1.2 !important;
     }
     .res-main-title { font-size: 20px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 4px; }
     .res-sub-title { font-size: 18px !important; font-weight: 700; color: #333; }
-    
     .nav-link-bar {
         display: flex !important; width: 100% !important; background: white !important; 
         border: 1px solid #D1D9E6 !important; border-radius: 0 0 10px 10px !important; 
@@ -56,11 +54,10 @@ st.markdown("""
     }
     .nav-item {
         flex: 1 !important; text-align: center !important; padding: 10px 0 !important;
-        text-decoration: none !important; color: #1E3A5F !important;
-        font-weight: bold !important; border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
+        text-decoration: none !important; color: #1E3A5F !important; font-weight: bold !important; 
+        border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
     }
     .nav-item:last-child { border-right: none !important; }
-
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
@@ -75,12 +72,10 @@ st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div
 
 # 3. 입력부
 with st.form("search_form"):
-    # 세션에 저장된 날짜를 기본값으로 사용
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
-
     st.markdown('**🗓️ 대관 유형**')
     c1, c2 = st.columns(2)
     show_t = c1.checkbox("당일", value=True, key="chk_t")
@@ -89,7 +84,7 @@ with st.form("search_form"):
     if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
-        # 검색 시 URL 파라미터 제거 (선택 사항)
+        st.session_state.scroll_trigger += 1 # 버튼 누를 때마다 트리거 값 변경
         st.query_params.clear()
 
 # 4. 데이터 로직
@@ -112,20 +107,17 @@ def get_weekday_names(allow_day_str):
 # 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
+    
+    # [핵심] scroll_trigger 값을 key로 사용하여 매번 새로운 컴포넌트로 인식하게 함 (강제 재실행)
     components.html(f"""
         <script>
             window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});
         </script>
-    """, height=0)
+    """, height=0, key=f"scroll_{st.session_state.scroll_trigger}")
 
     d = st.session_state.target_date
     df_raw = get_data(d)
-    
-    # 이동 버튼용 날짜 계산
-    prev_d_str = (d - timedelta(1)).strftime('%Y-%m-%d')
-    next_d_str = (d + timedelta(1)).strftime('%Y-%m-%d')
-    today_d_str = today_kst().strftime('%Y-%m-%d')
-    
+    prev_d_str, next_d_str, today_d_str = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
@@ -160,7 +152,6 @@ if st.session_state.search_performed:
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                             day_info = get_weekday_names(row['allowDay']) if title == "🗓️ 기간 대관" else ""
                             period = f"{row['startDt']} ~ {row['endDt']} {day_info}" if title == "🗓️ 기간 대관" else row['startDt']
-                            
                             st.markdown(f"""
                             <div class="event-card">
                                 <span class="status-badge {s_cls}">{s_txt}</span>
