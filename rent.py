@@ -11,7 +11,7 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 상태 및 URL 파라미터 동기화 (기능 유지) ---
+# --- 세션 상태 및 URL 파라미터 동기화 (사용자님 소스 유지) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
@@ -27,65 +27,62 @@ if "d" in url_params:
     except:
         pass
 
-# 2. CSS 스타일 (원본 이미지의 깔끔함 + 사용자님 레이아웃)
+# 2. CSS 스타일 (시각적 스타일만 '옛날 원본' 방식으로 적용)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 검색 폼 디자인 */
+    /* 사용자님이 강조하신 메인 타이틀 */
+    .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
+    
+    /* 검색 폼 스타일 */
     .stForm { border: 1px solid #D1D9E6 !important; border-radius: 12px !important; padding: 20px !important; }
     
-    /* 상단 결과 박스 디자인 복구 */
+    /* 상단 결과 날짜 박스 */
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
     }
-    .res-main-title { font-size: 22px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 5px; }
-    .res-sub-title { font-size: 19px !important; font-weight: 700; color: #333; }
+    .res-main-title { font-size: 20px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 4px; }
+    .res-sub-title { font-size: 18px !important; font-weight: 700; color: #333; }
     .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
 
-    /* 네비게이션 바 디자인 복구 */
+    /* 네비게이션 바 */
     .nav-link-bar {
         display: flex; width: 100%; background: white; 
-        border: 1px solid #D1D9E6; border-radius: 0 0 12px 12px; 
+        border: 1px solid #D1D9E6; border-radius: 0 0 10px 10px; 
         margin-bottom: 25px; overflow: hidden;
     }
     .nav-item {
         flex: 1; text-align: center; padding: 10px 0;
         text-decoration: none; color: #1E3A5F; font-weight: bold; 
-        border-right: 1px solid #D1D9E6; font-size: 14px;
+        border-right: 1px solid #D1D9E6; font-size: 13px;
     }
     .nav-item:last-child { border-right: none; }
 
-    /* 건물 헤더 및 섹션 타이틀 */
+    /* 건물 및 섹션 헤더 */
     .building-header { font-size: 18px; font-weight: bold; color: #1E3A5F; border-bottom: 2px solid #1E3A5F; padding-bottom: 8px; margin: 25px 0 15px 0; }
-    .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 15px 0 8px 5px; padding-left: 8px; border-left: 4px solid #D1D9E6; }
+    .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
 
-    /* 대관 카드 디자인 (원본 복구: 파란색 왼쪽 선 제거) */
-    .event-card { 
-        border: 1px solid #E0E0E0; padding: 15px; border-radius: 10px; 
-        margin-bottom: 12px !important; background-color: #ffffff; position: relative;
-    }
-    .status-badge { position: absolute; top: 15px; right: 15px; padding: 2px 10px; font-size: 12px; border-radius: 12px; font-weight: bold; background-color: #FFF4E5; color: #B25E09; }
+    /* 대관 카드 (옛날 스타일 복구: 파란 선 제거, 둥근 테두리) */
+    .event-card { border: 1px solid #E0E0E0; padding: 15px; border-radius: 10px; margin-bottom: 12px !important; background-color: #ffffff; position: relative; }
+    .status-badge { position: absolute; top: 15px; right: 15px; background-color: #FFF4E5; color: #B25E09; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
     
-    /* 카드 내부 텍스트 스타일 */
-    .res-place { font-size: 17px; font-weight: 800; color: #1E3A5F; margin-bottom: 8px; }
-    .res-time { color: #FF4B4B; font-weight: bold; font-size: 15px; }
+    .card-place { font-size: 17px; font-weight: 800; color: #1E3A5F; margin-bottom: 8px; }
     .res-info-line { display: flex; align-items: flex-start; margin-bottom: 4px; font-size: 15px; color: #333; }
+    .res-time { color: #FF4B4B; font-weight: bold; }
     
-    /* 하단 정보 (구분선 + 👥 아이콘 복구) */
-    .bottom-info { 
-        margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 10px;
-        font-size: 13px; color: #888; display: flex; align-items: center; justify-content: space-between;
-    }
+    /* 하단 주관부서 (아이콘 및 구분선 스타일) */
+    .bottom-info { font-size: 13px; color: #888; margin-top: 10px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 8px; align-items: center; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (기능 유지)
+# 3. 입력부 (사용자님 구성 유지)
 with st.form("search_form"):
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
@@ -103,7 +100,7 @@ with st.form("search_form"):
         st.query_params.clear()
         st.rerun()
 
-# 4. 데이터 로직 (기능 유지)
+# 4. 데이터 로직 (사용자님 로직 유지)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -118,10 +115,10 @@ def get_weekday_names(allow_day_str):
     day_list = [days.get(d.strip()) for d in str(allow_day_str).split(",") if days.get(d.strip())]
     return f"({','.join(day_list)})" if day_list else ""
 
-# 5. 결과 출력
+# 5. 결과 출력 (디자인만 옛날 것으로 입힘)
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    components.html(f"""<script>window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});</script>""", height=0)
+    components.html("""<script>window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});</script>""", height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
@@ -162,7 +159,7 @@ if st.session_state.search_performed:
                             st.markdown(f"""
                             <div class="event-card">
                                 <span class="status-badge">예약확정</span>
-                                <div class="res-place">📍 {row['placeNm']}</div>
+                                <div class="card-place">📍 {row['placeNm']}</div>
                                 <div class="res-info-line"><span style="width:25px;">⏰</span><span class="res-time">{row['startTime']} ~ {row['endTime']}</span></div>
                                 <div class="res-info-line"><span style="width:25px;">📄</span><span>{row['eventNm']}</span></div>
                                 <div class="bottom-info">
