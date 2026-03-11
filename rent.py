@@ -20,12 +20,13 @@ if "target_date" not in st.session_state:
 if "search_performed" not in st.session_state:
     st.session_state.search_performed = False
 
-# 3. CSS 스타일 (화살표 디자인 및 버튼 슬림화)
+# 3. CSS 스타일 (화살표 디자인 및 버튼 슬림화만 추가)
 st.markdown("""
 <style>
     .block-container { padding: 1.5rem 1rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
+    /* 타이틀 박스 (image_f14a1d 스타일) */
     .result-main-box {
         background-color: #F0F4FA;
         border: 1px solid #D1D9E6;
@@ -33,26 +34,30 @@ st.markdown("""
         padding: 20px 10px;
         text-align: center;
         margin-top: 30px;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
     .result-main-title { font-size: 20px; font-weight: 800; color: #1E3A5F; margin-bottom: 10px; display: block; }
-    .result-main-date { font-size: 18px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 15px; }
+    .result-main-date { font-size: 18px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 12px; }
 
+    /* 요일 색상 */
     .blue-date { color: #0047FF !important; }
     .red-date { color: #FF0000 !important; }
     .black-date { color: #333333 !important; }
 
+    /* 슬림 내비게이션 버튼 (중앙 정렬) */
     div[data-testid="stHorizontalBlock"] div[data-testid="stColumn"] button {
         height: 28px !important;
         min-height: 28px !important;
         padding: 0px !important;
         font-size: 12px !important;
         border-radius: 4px !important;
+        background-color: white !important;
+        border: 1px solid #D1D9E6 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 입력 UI (기존 설정 유지)
+# 4. 상단 입력 UI (원본 설정 100% 유지)
 st.markdown('<h2 style="text-align:center;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
@@ -87,7 +92,7 @@ if st.session_state.search_performed:
     if w_idx == 5: c_cls = "blue-date"
     elif w_idx == 6 or is_holiday(d): c_cls = "red-date"
 
-    # [디자인] f1ac37 스타일 화살표 박스
+    # 화살표 박스 (이미지 f14a1d 스타일)
     st.markdown(f"""
     <div class="result-main-box">
         <span class="result-main-title">성의교정 대관 현황</span>
@@ -99,8 +104,8 @@ if st.session_state.search_performed:
     </div>
     """, unsafe_allow_html=True)
     
-    # [디자인] 슬림 버튼 3개
-    bc1, bc2, bc3, bc4, bc5 = st.columns([1.5, 0.5, 1, 0.5, 1.5])
+    # 슬림 버튼 3개
+    bc1, bc2, bc3, bc4, bc5 = st.columns([1.8, 0.4, 0.8, 0.4, 1.8])
     with bc2:
         if st.button("◀", key="p"):
             st.session_state.target_date -= timedelta(days=1)
@@ -129,21 +134,20 @@ if st.session_state.search_performed:
                 if not combined.empty:
                     has_any = True
                     for _, row in combined.iterrows():
-                        # 카드 디자인 복구 (하단 날짜 및 신청부서 정보 포함)
+                        # 카드 디자인 완벽 복구 (이미지 f14a1d 기준)
                         st.markdown(f"""
-                        <div style="border:1px solid #E0E0E0; border-left:5px solid #2E5077; padding:12px; border-radius:6px; margin-bottom:10px; background:white; position:relative;">
-                            <div style="position:absolute; top:10px; right:10px; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px;">예약확정</div>
-                            <div style="font-size:16px; font-weight:800; color:#1E3A5F;">📍 {row['placeNm']}</div>
-                            <div style="font-size:15px; font-weight:700; color:#D32F2F; margin-top:3px;">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                            <div style="font-size:14px; color:#444; margin-top:5px; font-weight:500;">📄 {row['eventNm']}</div>
-                            <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
-                            <div style="display:flex; justify-content:space-between; font-size:12px; color:#888;">
+                        <div style="border:1px solid #E0E0E0; border-left:8px solid #2E5077; padding:15px; border-radius:8px; margin-bottom:12px; background:white; position:relative; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="position:absolute; top:12px; right:12px; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px;">예약확정</div>
+                            <div style="font-size:17px; font-weight:800; color:#1E3A5F; margin-bottom:6px;">📍 {row['placeNm']}</div>
+                            <div style="font-size:15px; font-weight:700; color:#D32F2F; margin-bottom:6px;">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                            <div style="font-size:14px; color:#333; margin-bottom:12px; line-height:1.4;">📄 {row['eventNm']}</div>
+                            <div style="border-top:1px solid #F0F0F0; padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:#666;">
                                 <span>📅 {row['startDt']}</span>
-                                <span>👥 {row['regUserNm'] if 'regUserNm' in row else '정보없음'}</span>
+                                <span>👤 {row['regUserNm'] if 'regUserNm' in row and row['regUserNm'] else '정보없음'}</span>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
         if not has_any:
-            st.markdown('<div style="color:#999; font-size:13px; padding:15px; text-align:center; background:#FAFAFA; border:1px dashed #DDD; border-radius:10px;">조회된 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="color:#999; font-size:13px; padding:20px; text-align:center; background:#FAFAFA; border:1px dashed #DDD; border-radius:10px;">조회된 대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
     st.markdown('<div style="height:50px;"></div>', unsafe_allow_html=True)
