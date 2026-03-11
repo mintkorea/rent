@@ -20,31 +20,44 @@ if "target_date" not in st.session_state:
 if "search_performed" not in st.session_state:
     st.session_state.search_performed = False
 
-# 3. CSS 스타일 (이미지 f1465e/f1ac37 스타일 반영 및 버튼 슬림화)
+# 3. CSS 스타일 (이미지 f1c9e3 기준: 타이틀 박스 + 날짜 박스 분리형)
 st.markdown("""
 <style>
     .block-container { padding: 1.5rem 1rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     
-    /* 결과 상단 통박스 디자인 */
-    .result-main-box {
-        background-color: #F0F4FA;
+    /* 타이틀 박스 (길게) */
+    .title-box {
+        background-color: #F8FAFF;
         border: 1px solid #D1D9E6;
-        border-radius: 12px;
-        padding: 20px 10px;
+        border-radius: 10px 10px 0 0;
+        padding: 10px;
         text-align: center;
+        font-size: 18px;
+        font-weight: 800;
+        color: #1E3A5F;
         margin-top: 30px;
-        margin-bottom: 5px;
     }
-    .result-main-title { font-size: 20px; font-weight: 800; color: #1E3A5F; margin-bottom: 10px; display: block; }
-    .result-main-date { font-size: 18px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 12px; }
+    
+    /* 날짜 박스 (길게) */
+    .date-display-box {
+        background-color: #FFFFFF;
+        border: 1px solid #D1D9E6;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        padding: 8px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
 
-    /* 요일 색상 */
+    /* 요일 색상 로직 */
     .blue-date { color: #0047FF !important; }
     .red-date { color: #FF0000 !important; }
     .black-date { color: #333333 !important; }
 
-    /* 내비게이션 버튼 슬림화 */
+    /* 하단 슬림 내비게이션 버튼 (중앙 정렬) */
     div[data-testid="stHorizontalBlock"] div[data-testid="stColumn"] button {
         height: 28px !important;
         min-height: 28px !important;
@@ -57,7 +70,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 4. 상단 입력 UI (원본 소스 구성 유지)
+# 4. 상단 입력 UI (기존 소스 무수정 유지)
 st.markdown('<h2 style="text-align:center;">🏫 성의교정 시설 대관 현황</h2>', unsafe_allow_html=True)
 st.session_state.target_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
 
@@ -72,7 +85,7 @@ show_period = st.checkbox("기간 대관", value=True)
 if st.button("🔍 검색하기", use_container_width=True, type="primary"):
     st.session_state.search_performed = True
 
-# 5. 데이터 로직 (원본 소스 유지)
+# 5. 데이터 로직 (원본 무수정 유지)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -92,19 +105,11 @@ if st.session_state.search_performed:
     if w_idx == 5: c_cls = "blue-date"
     elif w_idx == 6 or is_holiday(d): c_cls = "red-date"
 
-    # 화살표 박스 디자인 (image_f1465e 참조)
-    st.markdown(f"""
-    <div class="result-main-box">
-        <span class="result-main-title">성의교정 대관 현황</span>
-        <div class="result-main-date">
-            <span style="color:#1E3A5F;">⬅</span>
-            <span class="{c_cls}">{d.strftime('%Y.%m.%d')}.({w_str})</span>
-            <span style="color:#1E3A5F;">➡</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # [디자인 복구] 화살표 없는 긴 2단 박스
+    st.markdown('<div class="title-box">성의교정 대관 현황</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="date-display-box {c_cls}">{d.strftime("%Y.%m.%d")}.({w_str})</div>', unsafe_allow_html=True)
     
-    # 슬림 버튼 3개 중앙 정렬
+    # [추가] 슬림 버튼 3개 중앙 정렬
     bc1, bc2, bc3, bc4, bc5 = st.columns([1.8, 0.4, 0.8, 0.4, 1.8])
     with bc2:
         if st.button("◀", key="p"):
@@ -121,18 +126,17 @@ if st.session_state.search_performed:
 
     df_raw = get_data(st.session_state.target_date)
     for bu in selected_bu:
-        # 기존 소스의 디자인 로직 유지
+        # 기존 카드 디자인 및 데이터 로직 유지
         st.markdown(f'<div style="font-size:18px; font-weight:bold; color:#1E3A5F; border-bottom:2px solid #1E3A5F; padding-bottom:5px; margin:25px 0 10px 0;">🏢 {bu}</div>', unsafe_allow_html=True)
         
         has_any = False
         if not df_raw.empty:
             bu_df = df_raw[df_raw['buNm'].str.replace(" ","").str.contains(bu.replace(" ",""), na=False)].copy()
             if not bu_df.empty:
-                # [중요] 기존 소스의 당일/기간 대관 필터링 로직 유지
                 t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_today else pd.DataFrame()
                 p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_period else pd.DataFrame()
                 
-                # 요일별 표출 로직 (원본 유지)
+                # 기간 대관 요일 필터링 (원본 무수정)
                 v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: str(w_idx+1) in [i.strip() for i in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
                 
                 combined = pd.concat([t_ev, v_p_ev]).sort_values(by='startTime')
@@ -140,7 +144,7 @@ if st.session_state.search_performed:
                 if not combined.empty:
                     has_any = True
                     for _, row in combined.iterrows():
-                        # 기존 카드 디자인 및 데이터 출력 필드 유지
+                        # 원본 카드 디자인 로직 유지
                         st.markdown(f"""
                         <div style="border:1px solid #E0E0E0; border-left:8px solid #2E5077; padding:15px; border-radius:8px; margin-bottom:12px; background:white; position:relative;">
                             <div style="position:absolute; top:12px; right:12px; background:#FFF3E0; color:#E65100; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px;">예약확정</div>
