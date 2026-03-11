@@ -5,48 +5,40 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정 및 시간대
+# 1. 페이지 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 상태 초기화 (에러 방지용) ---
+# --- 세션 초기화 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
-if 's_count' not in st.session_state:
-    st.session_state.s_count = 0
 
-# --- URL 파라미터 처리 (Next/Before 버튼 대응) ---
-# st.query_params는 딕셔너리와 유사하게 작동하므로 .get() 사용이 안전합니다.
-url_date_str = st.query_params.get("d")
-if url_date_str:
+# --- URL 파라미터 처리 (Next/Before) ---
+url_d = st.query_params.get("d")
+if url_d:
     try:
-        requested_date = datetime.strptime(url_date_str, "%Y-%m-%d").date()
-        if st.session_state.target_date != requested_date:
-            st.session_state.target_date = requested_date
+        url_date = datetime.strptime(url_d, "%Y-%m-%d").date()
+        if st.session_state.target_date != url_date:
+            st.session_state.target_date = url_date
             st.session_state.search_performed = True
-            st.session_state.s_count += 1
     except:
         pass
 
-# 2. CSS 스타일 (타이틀 크기, 요일 색상, 줄간격 축소 반영)
+# 2. CSS 스타일
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
-    
-    /* 타이틀 크기 복구 */
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
-    
-    /* 요일 색상 */
+    .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
     
-    /* 결과 타이틀 박스 줄간격 축소 */
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
@@ -79,23 +71,20 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (st.form 사용하여 달력 선택 시 즉시 검색 방지)
+# 3. 입력부
 with st.form("search_form"):
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
-    
     st.markdown('**🗓️ 대관 유형**')
     c1, c2 = st.columns(2)
     show_t = c1.checkbox("당일", value=True, key="chk_t")
     show_p = c2.checkbox("기간", value=True, key="chk_p")
-    
     submit = st.form_submit_button("🔍 검색하기", use_container_width=True)
     if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
-        st.session_state.s_count += 1
         st.query_params.clear()
 
 # 4. 데이터 로직
@@ -105,9 +94,7 @@ def get_data(d):
     params = {"mode": "getReservedData", "start": d.strftime('%Y-%m-%d'), "end": d.strftime('%Y-%m-%d')}
     try:
         res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        if res.status_code == 200:
-            return pd.DataFrame(res.json().get('res', []))
-        return pd.DataFrame()
+        return pd.DataFrame(res.json().get('res', [])) if res.status_code == 200 else pd.DataFrame()
     except: return pd.DataFrame()
 
 def get_weekday_names(allow_day_str):
@@ -117,21 +104,19 @@ def get_weekday_names(allow_day_str):
 
 # 5. 결과 출력
 if st.session_state.search_performed:
+    # [수정] TypeError의 원인이 된 key 옵션을 제거하고 st.empty()로 스크롤 처리
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    
-    # [수정] TypeError 방지를 위해 변수에 값을 담아 전달
-    current_count = st.session_state.s_count
-    components.html(f"""
-        <script>
-            window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});
-        </script>
-    """, height=0, key=f"scroll_comp_{current_count}")
+    scroll_placeholder = st.empty()
+    with scroll_placeholder:
+        components.html("""
+            <script>
+                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+            </script>
+        """, height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
-    
-    # 버튼용 날짜 문자열
-    prev_d_str, next_d_str, today_d_str = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
+    prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
@@ -141,9 +126,9 @@ if st.session_state.search_performed:
         <span class="res-sub-title">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
     </div>
     <div class="nav-link-bar">
-        <a href="./?d={prev_d_str}" target="_self" class="nav-item">◀ Before</a>
-        <a href="./?d={today_d_str}" target="_self" class="nav-item">Today</a>
-        <a href="./?d={next_d_str}" target="_self" class="nav-item">Next ▶</a>
+        <a href="./?d={prev_d}" target="_self" class="nav-item">◀ Before</a>
+        <a href="./?d={today_d}" target="_self" class="nav-item">Today</a>
+        <a href="./?d={next_d}" target="_self" class="nav-item">Next ▶</a>
     </div>
     """, unsafe_allow_html=True)
 
@@ -166,7 +151,6 @@ if st.session_state.search_performed:
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
                             day_info = get_weekday_names(row['allowDay']) if title == "🗓️ 기간 대관" else ""
                             period = f"{row['startDt']} ~ {row['endDt']} {day_info}" if title == "🗓️ 기간 대관" else row['startDt']
-                            
                             st.markdown(f"""
                             <div class="event-card">
                                 <span class="status-badge {s_cls}">{s_txt}</span>
