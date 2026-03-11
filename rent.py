@@ -27,7 +27,7 @@ if "d" in url_params:
     except:
         pass
 
-# 2. CSS 스타일 (사용자님 원본 수치 100% 복구)
+# 2. CSS 스타일 (사용자님 원본 소스 그대로 유지 + 체크박스 수정)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -35,7 +35,7 @@ st.markdown("""
     header { visibility: hidden; }
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
     
-    /* 사용자님 요청: 체크박스 간격 -10 복구 */
+    /* [수정 사항] 체크박스 간격 -10 */
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
     
     .sat { color: #0000FF !important; }
@@ -156,7 +156,7 @@ if st.session_state.search_performed:
         if not has_content:
             st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
 
-# 하단 2줄 공백 및 TOP 버튼 (원본 그대로 유지)
+# [수정 사항] 하단 2줄 공백 및 TOP 버튼 (사용자님 원본 수치 유지)
 st.write("")
 st.write("")
 st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
