@@ -5,25 +5,26 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 페이지 설정
+# 1. 페이지 설정 및 시간대
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 초기화 ---
+# --- 세션 상태 및 URL 파라미터 동기화 (핵심!) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# --- URL 파라미터 처리 (Next/Before) ---
-url_d = st.query_params.get("d")
-if url_d:
+# URL 파라미터가 있으면 세션 상태를 강제로 업데이트하고 검색 실행 상태로 변경
+url_params = st.query_params
+if "d" in url_params:
     try:
-        url_date = datetime.strptime(url_d, "%Y-%m-%d").date()
-        if st.session_state.target_date != url_date:
-            st.session_state.target_date = url_date
+        url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
+        # URL 날짜가 세션과 다르거나 아직 검색 전이라면 강제 활성화
+        if st.session_state.target_date != url_d or not st.session_state.search_performed:
+            st.session_state.target_date = url_d
             st.session_state.search_performed = True
     except:
         pass
@@ -38,15 +39,12 @@ st.markdown("""
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
-    
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
-        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
-        line-height: 1.2 !important;
+        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; line-height: 1.2 !important;
     }
     .res-main-title { font-size: 20px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 4px; }
     .res-sub-title { font-size: 18px !important; font-weight: 700; color: #333; }
-    
     .nav-link-bar {
         display: flex !important; width: 100% !important; background: white !important; 
         border: 1px solid #D1D9E6 !important; border-radius: 0 0 10px 10px !important; 
@@ -54,11 +52,10 @@ st.markdown("""
     }
     .nav-item {
         flex: 1 !important; text-align: center !important; padding: 10px 0 !important;
-        text-decoration: none !important; color: #1E3A5F !important;
-        font-weight: bold !important; border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
+        text-decoration: none !important; color: #1E3A5F !important; font-weight: bold !important; 
+        border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
     }
     .nav-item:last-child { border-right: none !important; }
-
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
@@ -77,10 +74,12 @@ with st.form("search_form"):
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
+    
     st.markdown('**🗓️ 대관 유형**')
     c1, c2 = st.columns(2)
     show_t = c1.checkbox("당일", value=True, key="chk_t")
     show_p = c2.checkbox("기간", value=True, key="chk_p")
+    
     submit = st.form_submit_button("🔍 검색하기", use_container_width=True)
     if submit:
         st.session_state.target_date = selected_date
@@ -104,18 +103,19 @@ def get_weekday_names(allow_day_str):
 
 # 5. 결과 출력
 if st.session_state.search_performed:
-    # [수정] TypeError의 원인이 된 key 옵션을 제거하고 st.empty()로 스크롤 처리
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    scroll_placeholder = st.empty()
-    with scroll_placeholder:
-        components.html("""
-            <script>
-                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
-            </script>
-        """, height=0)
+    
+    # [핵심] 앵커 위치로 부드럽게 이동
+    components.html("""
+        <script>
+            window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+        </script>
+    """, height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
+    
+    # 버튼용 날짜 설정 (Today 포함)
     prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
