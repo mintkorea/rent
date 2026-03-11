@@ -4,15 +4,14 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
-import time
 
-# 1. 페이지 설정
+# 1. 페이지 설정 및 시간대
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- URL 파라미터 및 세션 관리 ---
+# --- [수정] TypeError 방지를 위한 URL 파라미터 로직 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
@@ -20,18 +19,19 @@ if 'search_performed' not in st.session_state:
 if 'scroll_trigger' not in st.session_state:
     st.session_state.scroll_trigger = 0
 
-query_params = st.query_params
-if "d" in query_params:
+# query_params["d"] 대신 .get()을 사용하여 안전하게 추출
+url_d = st.query_params.get("d")
+if url_d:
     try:
-        url_date = datetime.strptime(query_params["d"], "%Y-%m-%d").date()
+        url_date = datetime.strptime(url_d, "%Y-%m-%d").date()
         if st.session_state.target_date != url_date:
             st.session_state.target_date = url_date
             st.session_state.search_performed = True
-            st.session_state.scroll_trigger += 1 # 이동 시에도 스크롤 트리거 작동
+            st.session_state.scroll_trigger += 1
     except:
         pass
 
-# 2. CSS 스타일 (동일 유지)
+# 2. CSS 스타일 (타이틀 크기 복구, 요일 색상, 줄간격 최적화)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -41,12 +41,15 @@ st.markdown("""
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
+    
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
-        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; line-height: 1.2 !important;
+        border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
+        line-height: 1.2 !important;
     }
     .res-main-title { font-size: 20px !important; font-weight: 800; color: #1E3A5F; display: block; margin-bottom: 4px; }
     .res-sub-title { font-size: 18px !important; font-weight: 700; color: #333; }
+    
     .nav-link-bar {
         display: flex !important; width: 100% !important; background: white !important; 
         border: 1px solid #D1D9E6 !important; border-radius: 0 0 10px 10px !important; 
@@ -54,10 +57,11 @@ st.markdown("""
     }
     .nav-item {
         flex: 1 !important; text-align: center !important; padding: 10px 0 !important;
-        text-decoration: none !important; color: #1E3A5F !important; font-weight: bold !important; 
-        border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
+        text-decoration: none !important; color: #1E3A5F !important;
+        font-weight: bold !important; border-right: 1px solid #F0F0F0 !important; font-size: 13px !important;
     }
     .nav-item:last-child { border-right: none !important; }
+
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
@@ -84,10 +88,10 @@ with st.form("search_form"):
     if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
-        st.session_state.scroll_trigger += 1 # 버튼 누를 때마다 트리거 값 변경
+        st.session_state.scroll_trigger += 1
         st.query_params.clear()
 
-# 4. 데이터 로직
+# 4. 데이터 로직 (JSON 방어)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -107,8 +111,6 @@ def get_weekday_names(allow_day_str):
 # 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    
-    # [핵심] scroll_trigger 값을 key로 사용하여 매번 새로운 컴포넌트로 인식하게 함 (강제 재실행)
     components.html(f"""
         <script>
             window.parent.document.getElementById('result-anchor').scrollIntoView({{behavior: 'smooth', block: 'start'}});
