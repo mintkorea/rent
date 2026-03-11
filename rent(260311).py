@@ -11,32 +11,33 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 상태 및 URL 파라미터 동기화 (핵심!) ---
+# --- 세션 상태 및 URL 파라미터 동기화 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# URL 파라미터가 있으면 세션 상태를 강제로 업데이트하고 검색 실행 상태로 변경
 url_params = st.query_params
 if "d" in url_params:
     try:
         url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
-        # URL 날짜가 세션과 다르거나 아직 검색 전이라면 강제 활성화
         if st.session_state.target_date != url_d or not st.session_state.search_performed:
             st.session_state.target_date = url_d
             st.session_state.search_performed = True
     except:
         pass
 
-# 2. CSS 스타일
+# 2. CSS 스타일 (사용자님 원본 소스 그대로 유지 + 체크박스 수정)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
     .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
     header { visibility: hidden; }
     .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
+    
+    /* [수정 사항] 체크박스 간격 -10 */
     .stCheckbox { margin-top: -10px !important; margin-bottom: -5px !important; }
+    
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
     .date-display-box { 
@@ -85,6 +86,7 @@ with st.form("search_form"):
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
         st.query_params.clear()
+        st.rerun()
 
 # 4. 데이터 로직
 @st.cache_data(ttl=300)
@@ -104,18 +106,10 @@ def get_weekday_names(allow_day_str):
 # 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
-    
-    # [핵심] 앵커 위치로 부드럽게 이동
-    components.html("""
-        <script>
-            window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
-        </script>
-    """, height=0)
+    components.html("""<script>window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});</script>""", height=0)
 
     d = st.session_state.target_date
     df_raw = get_data(d)
-    
-    # 버튼용 날짜 설정 (Today 포함)
     prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
@@ -158,9 +152,11 @@ if st.session_state.search_performed:
                                 <div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div>
                                 <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
                                 <div class="bottom-info"><span>🗓️ {period}</span><span>👥 {row['mgDeptNm']}</span></div>
-                            </div>
-                            """, unsafe_allow_html=True)
+                            </div>""", unsafe_allow_html=True)
         if not has_content:
             st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
 
+# [수정 사항] 하단 2줄 공백 및 TOP 버튼 (사용자님 원본 수치 유지)
+st.write("")
+st.write("")
 st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
