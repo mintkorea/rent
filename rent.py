@@ -165,3 +165,80 @@ if st.session_state.search_performed:
 st.write("")
 st.write("")
 st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
+
+
+# --- [추가] 상시 개방 강의실 안내 (기간 및 요일 필터링 반영) ---
+st.markdown("---")
+st.markdown("### 🔓 요약: 조회일 상시 개방 안내")
+
+# 현재 조회 중인 날짜 정보
+v_date = start_selected
+v_weekday = v_date.isoweekday()  # 1:월 ~ 7:일
+is_weekend = v_weekday in [6, 7]
+
+# 기간 설정 (이미지 기준)
+is_period_4th = (date(v_date.year, 3, 2) <= v_date <= date(v_date.year, 4, 30))
+is_period_801 = (date(v_date.year, 2, 7) <= v_date <= date(v_date.year, 4, 24))
+
+open_cards = []
+
+# 1. 별관 (1201~1206)
+if not is_weekend:
+    open_cards.append({
+        "건물": "별관",
+        "내용": "1201~1206호 (오전 개방 / 오후 폐쇄)",
+        "코멘트": "1206호 금요일 10시 교육 예정" if v_weekday == 5 else ""
+    })
+else:
+    open_cards.append({
+        "건물": "별관",
+        "내용": "1201~1206호 (대관 현황 확인 후 개방)",
+        "코멘트": "주말 지침 적용"
+    })
+
+# 2. 성의회관 (요일 및 기간별 취합)
+seong_list = []
+
+# [평일 오전] 421~522
+if not is_weekend:
+    seong_list.append("📍 421~522호: 오전 개방 (오후 원칙적 폐쇄)")
+
+# [기간제] 402~407 (3/2 ~ 4/30)
+if is_period_4th:
+    seong_list.append("📍 402~407호: 08:00 ~ 20:00 (첫 순찰 개방 / 마지막 잠금)")
+
+# [기간제] 801호 (2/7 ~ 4/24)
+if is_period_801:
+    seong_list.append("📍 801호: 09:00 ~ 21:00 (직원 개방 / 21:00 폐쇄)")
+
+# [요일제] 수요일(506호), 화/수(502-1호)
+if v_weekday == 2: # 화
+    seong_list.append("📍 502-1호: 19:00 ~ 22:00 (대학원 박사과정)")
+elif v_weekday == 3: # 수
+    seong_list.append("📍 506호(솔로몬): 15:00경 개방")
+    seong_list.append("📍 502-1호: 19:00 ~ 22:00 (대학원 박사과정)")
+
+if seong_list:
+    open_cards.append({
+        "건물": "성의회관",
+        "내용": seong_list,
+        "코멘트": "학생 요청 시 무리한 퇴실 조치 금지"
+    })
+
+# --- 카드 출력 (화면 배치) ---
+if open_cards:
+    cols = st.columns(len(open_cards))
+    for i, card in enumerate(open_cards):
+        with cols[i]:
+            st.info(f"🏢 **{card['건물']}**")
+            if isinstance(card['내용'], list):
+                for item in card['내용']:
+                    st.write(item)
+            else:
+                st.write(f"✅ {card['내용']}")
+            
+            if card['코멘트']:
+                st.caption(f"💡 {card['코멘트']}")
+
+st.write("") # 여백
+
