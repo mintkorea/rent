@@ -22,22 +22,22 @@ def get_work_shift(d):
     ]
     return shifts[diff % 3]
 
-# --- 세션 상태 및 URL 파라미터 동기화 ---
+# --- [수정] 이동 및 검색 로직 강화 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
+# URL 파라미터가 있으면 즉시 검색 실행 상태로 변경
 url_params = st.query_params
 if "d" in url_params:
     try:
         url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
-        if st.session_state.target_date != url_d:
-            st.session_state.target_date = url_d
-            st.session_state.search_performed = True
+        st.session_state.target_date = url_d
+        st.session_state.search_performed = True # 이동 시 검색 상태 강제 활성화
     except: pass
 
-# 2. CSS 스타일 (사용자 원본 스타일 100% 유지 + TOP 버튼 위치 수정)
+# 2. CSS 스타일 (원본 스타일 100% 고정)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -114,7 +114,6 @@ def get_data(d):
 
 # 5. 결과 출력
 if st.session_state.search_performed:
-    # 검색결과로 이동하기 위한 앵커 (위치 최적화)
     st.markdown('<div id="result-anchor" style="margin-bottom:10px;"></div>', unsafe_allow_html=True)
     
     d = st.session_state.target_date
@@ -166,10 +165,9 @@ if st.session_state.search_performed:
         if not has_content:
             st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
-    # --- 6. 강의실 개방 지침 (누락 복구) ---
+    # --- 6. 강의실 개방 지침 ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
-    
     sh_list = []
     if not is_weekend:
         sh_list.append({"r": "421, 422, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
@@ -178,26 +176,18 @@ if st.session_state.search_performed:
     if date(d.year, 2, 7) <= d <= date(d.year, 4, 24):
         sh_note = "평일: 직원 개방 / 야간 21:00 폐쇄만" if not is_weekend else "주말: 학생 요청 시 해당 시간만 개방"
         sh_list.append({"r": "801호", "t": "09:00 ~ 21:00 (2/7~4/24)", "n": sh_note})
-
     if sh_list:
         sh_html = "".join([f'<div style="margin-bottom:12px;"><div class="open-room-name">• {i["r"]}</div><div class="open-room-time">⏰ {i["t"]}</div><div class="open-room-note">{i["n"]}</div></div>' for i in sh_list])
         st.markdown(f'<div class="open-card"><div class="open-bu-title">🏢 성의회관</div>{sh_html}</div>', unsafe_allow_html=True)
-
     bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
-    st.markdown(f"""
-    <div class="open-card">
-        <div class="open-bu-title">🏢 서울성모별관</div>
-        <div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div>
-        <div class="open-room-time">⏰ {bg_status}</div>
-        <div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday() == 5 else "평일/주말 순찰 지침 준수"}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="open-card"><div class="open-bu-title">🏢 서울성모별관</div><div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div><div class="open-room-time">⏰ {bg_status}</div><div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday()==5 else "평일/주말 순찰 지침 준수"}</div></div>""", unsafe_allow_html=True)
 
-    # 검색 결과로 자동 스크롤 (자바스크립트 강화)
+    # [수정] 스크롤 이동 자바스크립트 최적화
     components.html("""
         <script>
-            var element = window.parent.document.getElementById('result-anchor');
-            if (element) { element.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+            setTimeout(function() {
+                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+            }, 300);
         </script>
     """, height=0)
 
