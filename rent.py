@@ -11,7 +11,7 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- [수정] 세션 상태 관리: 버튼 클릭 시 즉시 반영되도록 로직 강화 ---
+# --- 세션 상태 관리 (버튼 클릭 즉시 반영용) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 
@@ -20,25 +20,24 @@ query_params = st.query_params
 if "d" in query_params:
     try:
         param_date = datetime.strptime(query_params["d"], "%Y-%m-%d").date()
-        st.session_state.target_date = param_date
+        if st.session_state.target_date != param_date:
+            st.session_state.target_date = param_date
     except: pass
 
-# --- [수정] 근무조 계산: 오늘(2026-03-13)을 A조로 확정 ---
+# --- 근무조 계산 (2026-03-13 금요일 = A조 기준) ---
 def get_work_shift(target_date):
-    # 사용자님 확인: 2026년 3월 13일은 A조
     anchor_date = date(2026, 3, 13)
-    diff = (target_date - anchor_date).days
+    days_diff = (target_date - anchor_date).days
+    shift_idx = days_diff % 3
     
-    # 3일 주기 순환 (나머지 연산 처리)
-    shift_idx = diff % 3
     shifts = [
-        {"name": "A조", "bg": "#FF9800", "color": "white"}, # 0: A
-        {"name": "B조", "bg": "#E91E63", "color": "white"}, # 1: B
-        {"name": "C조", "bg": "#2196F3", "color": "white"}  # 2: C
+        {"name": "A조", "bg": "#FF9800", "color": "white"}, # 주황
+        {"name": "B조", "bg": "#E91E63", "color": "white"}, # 빨강
+        {"name": "C조", "bg": "#2196F3", "color": "white"}  # 파랑
     ]
     return shifts[shift_idx]
 
-# 2. CSS 스타일 (원본 디자인 100% 복구)
+# 2. CSS 스타일 (사용자 원본 디자인 100% 복구)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -67,14 +66,10 @@ st.markdown("""
     .nav-item:last-child { border-right: none !important; }
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
-    
-    /* 대관 카드 (원본 복구) */
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; position: relative; }
+    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
     .status-badge { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
     .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 6px; }
-
-    /* 개방 지침 (확대) */
     .open-card { border: 2px dashed #2E5077; padding: 15px; border-radius: 10px; margin-bottom: 15px; background-color: #F8FAFF; }
     .open-bu-title { font-weight: 800; color: #2E5077; font-size: 19px !important; margin-bottom: 10px; border-bottom: 2px solid #D1D9E6; }
     .open-room-name { font-weight: bold; color: #333; font-size: 17px !important; margin-bottom: 3px; }
@@ -83,100 +78,4 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
-st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
-
-# 3. 입력부
-with st.form("search_form"):
-    selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
-    st.markdown('**🏢 건물 선택**')
-    ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-    selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
-    
-    st.markdown('**🗓️ 대관 유형**')
-    c1, c2 = st.columns(2)
-    show_t = c1.checkbox("당일", value=True)
-    show_p = c2.checkbox("기간", value=True)
-    
-    submit = st.form_submit_button("🔍 검색", use_container_width=True)
-    if submit:
-        st.session_state.target_date = selected_date
-        # 검색 시 URL 파라미터를 업데이트하여 새로고침 시에도 유지되도록 함
-        st.query_params["d"] = selected_date.strftime("%Y-%m-%d")
-
-# 4. 데이터 로직 (생략/유지)
-@st.cache_data(ttl=300)
-def get_data(d):
-    url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
-    params = {"mode": "getReservedData", "start": d.strftime('%Y-%m-%d'), "end": d.strftime('%Y-%m-%d')}
-    try:
-        res = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        return pd.DataFrame(res.json().get('res', [])) if res.status_code == 200 else pd.DataFrame()
-    except: return pd.DataFrame()
-
-# 5. 결과 출력
-st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
-
-d = st.session_state.target_date
-df_raw = get_data(d)
-shift = get_work_shift(d)
-w_idx = d.weekday()
-w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
-
-# 타이틀 및 네비게이션
-st.markdown(f"""
-<div class="date-display-box">
-    <span class="res-main-title">성의교정 대관 현황</span>
-    <span class="res-sub-title">
-        {d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span>
-        <span style="background-color:{shift['bg']}; color:{shift['color']}; padding:2px 8px; border-radius:15px; font-size:14px; margin-left:8px; vertical-align:middle; font-weight:bold;">
-            근무 : {shift['name']}
-        </span>
-    </span>
-</div>
-<div class="nav-link-bar">
-    <a href="./?d={(d - timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-item">◀ Before</a>
-    <a href="./?d={today_kst().strftime('%Y-%m-%d')}" target="_self" class="nav-item">Today</a>
-    <a href="./?d={(d + timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-item">Next ▶</a>
-</div>
-""", unsafe_allow_html=True)
-
-# 대관 내역 출력
-target_wd = str(d.weekday() + 1)
-for bu in selected_bu_list:
-    st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
-    has_content = False
-    if not df_raw.empty:
-        bu_df = df_raw[df_raw['buNm'].str.replace(" ", "").str.contains(bu.replace(" ", ""), na=False)].copy()
-        if not bu_df.empty:
-            t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_t else pd.DataFrame()
-            p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_p else pd.DataFrame()
-            v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: target_wd in [day.strip() for day in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
-            
-            for ev_df, title in [(t_ev, "📌 당일 대관"), (v_p_ev, "🗓️ 기간 대관")]:
-                if not ev_df.empty:
-                    has_content = True
-                    st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
-                    for _, row in ev_df.sort_values(by='startTime').iterrows():
-                        s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                        st.markdown(f"""
-                        <div class="event-card">
-                            <span class="status-badge {s_cls}">{s_txt}</span>
-                            <div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div>
-                            <div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                            <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
-                            <div class="bottom-info"><span>👥 {row['mgDeptNm']}</span></div>
-                        </div>""", unsafe_allow_html=True)
-    if not has_content:
-        st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
-
-# 6. 개방 지침 (하단 고정)
-st.markdown("<br><div class="building-header">🔓 초회 순찰 개방 지침</div>", unsafe_allow_html=True)
-# ... (지침 내용 생략 - 기존과 동일하게 포함됨)
-st.markdown(f'<div class="open-card"><div class="open-bu-title">🏢 성의회관</div><div class="open-room-name">• 421, 422, 521, 522호</div><div class="open-room-time">⏰ 주중: 오전 개방 / 오후 폐쇄</div><div class="open-room-note">학생 요청 시 무리한 퇴실 독촉 금지</div></div>', unsafe_allow_html=True)
-
-# [수정] 검색 시 결과 위치로 스크롤
-if submit:
-    components.html("<script>window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth'});</script>", height=0)
-
-st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
+st.markdown('<div id="top-anchor"></div>
