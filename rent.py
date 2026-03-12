@@ -167,7 +167,7 @@ if st.session_state.search_performed:
 
     # --- 6. 강의실 개방 지침 (확대 버전) ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
+    st.markdown('<div class="building-header">🔓 강의실 개방 일람</div>', unsafe_allow_html=True)
 
     is_p_4th = (date(d.year, 3, 2) <= d <= date(d.year, 4, 30))
     is_p_801 = (date(d.year, 2, 7) <= d <= date(d.year, 4, 24))
