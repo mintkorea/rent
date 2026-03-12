@@ -11,7 +11,7 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- 세션 상태 및 URL 파라미터 동기화 ---
+# --- 세션 및 URL 파라미터 관리 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 
@@ -20,7 +20,7 @@ if "d" in url_params:
     try: st.session_state.target_date = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
     except: pass
 
-# 2. CSS 스타일 (원본 카드 디자인 복구 및 지침 폰트 확대)
+# 2. CSS 스타일 (원본 카드 디자인 복구 및 지침 섹션만 확대)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -50,13 +50,18 @@ st.markdown("""
     .building-header { font-size: 18px !important; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
     .section-title { font-size: 15px; font-weight: bold; color: #555; margin: 10px 0 6px 0; padding-left: 5px; border-left: 4px solid #ccc; }
     
-    /* 원본 카드 디자인 */
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; position: relative; }
+    /* [원본 복구] 대관 결과 카드 디자인 (컴팩트하게 유지) */
+    .event-card { 
+        border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
+        padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; 
+        background-color: #ffffff; line-height: 1.4 !important; position: relative; 
+    }
     .status-badge { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
-    .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
+    .status-y { background-color: #FFF4E5; color: #B25E09; } 
+    .status-n { background-color: #E8F0FE; color: #1967D2; }
     .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 6px; }
 
-    /* 개방 지침 폰트 확대 */
+    /* [확대 버전] 강의실 개방 지침 섹션 전용 */
     .open-card { border: 2px dashed #2E5077; padding: 15px; border-radius: 10px; margin-bottom: 15px; background-color: #F8FAFF; }
     .open-bu-title { font-weight: 800; color: #2E5077; font-size: 19px !important; margin-bottom: 10px; border-bottom: 2px solid #D1D9E6; }
     .open-room-name { font-weight: bold; color: #333; font-size: 17px !important; margin-bottom: 3px; }
@@ -68,21 +73,22 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (순서 조정: 성의회관, 의생명산업연구원, 옴니버스 파크)
+# 3. 입력부 (건물 배치 순서 수정)
 with st.form("search_form"):
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
     
-    # 요청하신 순서대로 리스트 구성
+    # 순서: 성의회관 -> 의생명산업연구원 -> 옴니버스 파크 순
     ORDERED_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     
     current_selected = []
     cols = st.columns(2)
+    # 초기 로드 시 성의회관, 의생명산업연구원 기본 체크
+    initial_bus = st.query_params.get_all("b") if "b" in st.query_params else ["성의회관", "의생명산업연구원"]
+    
     for i, bu in enumerate(ORDERED_BU):
         with cols[i % 2]:
-            # 초기 선택값 유지
-            default_val = bu in (st.query_params.get_all("b") if "b" in st.query_params else ["성의회관", "의생명산업연구원"])
-            if st.checkbox(bu, value=default_val, key=f"f_{bu}"):
+            if st.checkbox(bu, value=(bu in initial_bus), key=f"f_{bu}"):
                 current_selected.append(bu)
     
     st.markdown('**🗓️ 대관 유형**')
@@ -90,12 +96,13 @@ with st.form("search_form"):
     show_t = c1.checkbox("당일", value=True)
     show_p = c2.checkbox("기간", value=True)
     
-    submit = st.form_submit_button("🔍 검색 및 지침 확인", use_container_width=True)
+    # 버튼 문구 '검색'으로 수정
+    submit = st.form_submit_button("🔍 검색", use_container_width=True)
     if submit:
         st.session_state.target_date = selected_date
         st.query_params.from_dict({"d": selected_date.strftime("%Y-%m-%d"), "b": current_selected})
 
-# 4. 데이터 로직
+# 4. 데이터 로직 (생략/유지)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -111,8 +118,8 @@ df_raw = get_data(d)
 v_wd = d.isoweekday() 
 is_weekend = v_wd in [6, 7]
 
-# 검색 결과 바로 위로 이동하기 위한 앵커
-st.markdown('<div id="result-anchor" style="margin-bottom: 20px;"></div>', unsafe_allow_html=True)
+# 검색 결과 이동을 위한 앵커 (결과 타이틀 바로 위)
+st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
 
 # 네비게이션
 current_bus = st.query_params.get_all("b") if "b" in st.query_params else ["성의회관", "의생명산업연구원"]
@@ -132,7 +139,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 메인 대관 내역 (카드 디자인 복구)
+# 메인 대관 내역 (원본 디자인 카드)
 target_wd = str(d.weekday() + 1)
 for bu in current_bus:
     st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
@@ -161,10 +168,11 @@ for bu in current_bus:
     if not has_content:
         st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
 
-# --- 6. 강의실 개방 지침 (폰트 확대 유지) ---
+# --- 6. 강의실 개방 지침 (확대 버전 유지) ---
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
 
+# 날짜별 변수 (생략/유지)
 is_p_4th = (date(d.year, 3, 2) <= d <= date(d.year, 4, 30))
 is_p_801 = (date(d.year, 2, 7) <= d <= date(d.year, 4, 24))
 
@@ -173,19 +181,15 @@ if not is_weekend:
     sh_list.append({"r": "421, 422, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
     if is_p_4th:
         sh_list.append({"r": "402, 403, 404, 405, 406, 407호", "t": "08:00 ~ 20:00 (3/2~4/30)", "n": "첫 순찰 개방 / 마지막 순찰 잠금"})
-    if v_wd == 2: sh_list.append({"r": "502-1호", "t": "19:00 ~ 22:00 (화)", "n": "대학원 박사과정 기간 개방"})
-    elif v_wd == 3:
-        sh_list.append({"r": "506호 (솔로몬)", "t": "15:00경 개방 (수)", "n": "매주 수요일 지침"})
-        sh_list.append({"r": "502-1호", "t": "19:00 ~ 22:00 (수)", "n": "대학원 박사과정 기간 개방"})
-
 if is_p_801:
-    sh_note = "평일: START센터 직원 개방 / 야간 21:00 폐쇄만 수행" if not is_weekend else "주말: 학생 요청 시 해당 시간 동안만 개방"
+    sh_note = "평일: 직원 개방 / 야간 21:00 폐쇄만" if not is_weekend else "주말: 학생 요청 시 해당 시간만 개방"
     sh_list.append({"r": "801호", "t": "09:00 ~ 21:00 (2/7~4/24)", "n": sh_note})
 
 if sh_list:
     sh_html = "".join([f'<div style="margin-bottom:12px;"><div class="open-room-name">• {i["r"]}</div><div class="open-room-time">⏰ {i["t"]}</div><div class="open-room-note">{i["n"]}</div></div>' for i in sh_list])
     st.markdown(f'<div class="open-card"><div class="open-bu-title">🏢 성의회관</div>{sh_html}</div>', unsafe_allow_html=True)
 
+# 별관 지침
 bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
 st.markdown(f"""
 <div class="open-card">
@@ -196,7 +200,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 검색 버튼 클릭 시 결과 타이틀 위치로 스크롤
+# 검색 버튼 클릭 시 결과 타이틀(result-anchor)로 스크롤
 if submit:
     components.html("""
         <script>
