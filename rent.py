@@ -13,7 +13,7 @@ st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
 # 근무조 계산 로직
 def get_work_shift(d):
-    anchor = date(2026, 3, 13) # 3/13 금요일 = A조
+    anchor = date(2026, 3, 13)
     diff = (d - anchor).days
     shifts = [
         {"n": "A조", "bg": "#FF9800"},
@@ -22,22 +22,21 @@ def get_work_shift(d):
     ]
     return shifts[diff % 3]
 
-# --- [수정] 이동 및 검색 로직 강화 ---
+# 이동 및 검색 로직
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = False
 
-# URL 파라미터가 있으면 즉시 검색 실행 상태로 변경
 url_params = st.query_params
 if "d" in url_params:
     try:
         url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
         st.session_state.target_date = url_d
-        st.session_state.search_performed = True # 이동 시 검색 상태 강제 활성화
+        st.session_state.search_performed = True
     except: pass
 
-# 2. CSS 스타일 (원본 스타일 100% 고정)
+# 2. CSS 스타일 (사용자 원본 100% + TOP 버튼 위치 상향)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -78,7 +77,7 @@ st.markdown("""
     .open-room-time { font-size: 16px !important; color: #FF4B4B; font-weight: bold; margin-bottom: 5px; }
     .open-room-note { font-size: 14px !important; color: #444; line-height: 1.4; background: #eee; padding: 5px 8px; border-radius: 4px; }
 
-    /* TOP 버튼 위치 상향 조정 */
+    /* TOP 버튼 */
     .top-btn { position:fixed; bottom:80px; right:20px; z-index:999; }
 </style>
 """, unsafe_allow_html=True)
@@ -114,7 +113,7 @@ def get_data(d):
 
 # 5. 결과 출력
 if st.session_state.search_performed:
-    st.markdown('<div id="result-anchor" style="margin-bottom:10px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
     
     d = st.session_state.target_date
     df_raw = get_data(d)
@@ -154,20 +153,11 @@ if st.session_state.search_performed:
                         st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
                         for _, row in ev_df.sort_values(by='startTime').iterrows():
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                            st.markdown(f"""
-                            <div class="event-card">
-                                <span class="status-badge {s_cls}">{s_txt}</span>
-                                <div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div>
-                                <div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                                <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
-                                <div class="bottom-info"><span>🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div>
-                            </div>""", unsafe_allow_html=True)
-        if not has_content:
-            st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
+                            st.markdown(f"""<div class="event-card"><span class="status-badge {s_cls}">{s_txt}</span><div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div><div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div><div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div><div class="bottom-info"><span>🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div></div>""", unsafe_allow_html=True)
+        if not has_content: st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
-    # --- 6. 강의실 개방 지침 ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
+    # 개방 지침
+    st.markdown("<br><div class=\"building-header\">🔓 초회 순찰 개방 지침</div>", unsafe_allow_html=True)
     sh_list = []
     if not is_weekend:
         sh_list.append({"r": "421, 422, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
@@ -182,17 +172,18 @@ if st.session_state.search_performed:
     bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
     st.markdown(f"""<div class="open-card"><div class="open-bu-title">🏢 서울성모별관</div><div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div><div class="open-room-time">⏰ {bg_status}</div><div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday()==5 else "평일/주말 순찰 지침 준수"}</div></div>""", unsafe_allow_html=True)
 
-    # [수정] 스크롤 이동 자바스크립트 최적화
+    # [보강] TOP 버튼 클릭 후 검색 시에도 이동하게 하는 자바스크립트
     components.html("""
         <script>
             setTimeout(function() {
+                const url = window.parent.location.href;
+                if (url.indexOf('#') > -1) {
+                    window.parent.history.replaceState('', document.title, url.split('#')[0]);
+                }
                 window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
             }, 300);
         </script>
     """, height=0)
 
-# 마지막 빈 줄 3개
 for _ in range(3): st.write("")
-
-# TOP 버튼 (위치 위로 조정)
 st.markdown("""<div class="top-btn"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
