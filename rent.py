@@ -11,18 +11,18 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회", layout="centered")
 
-# --- [수정] 근무조 계산 로직 (디자인 영향 없음) ---
+# 근무조 계산 로직
 def get_work_shift(d):
     anchor = date(2026, 3, 13) # 3/13 금요일 = A조
     diff = (d - anchor).days
     shifts = [
-        {"n": "A조", "bg": "#FF9800"}, # 주황
-        {"n": "B조", "bg": "#E91E63"}, # 빨강
-        {"n": "C조", "bg": "#2196F3"}  # 파랑
+        {"n": "A조", "bg": "#FF9800"},
+        {"n": "B조", "bg": "#E91E63"},
+        {"n": "C조", "bg": "#2196F3"}
     ]
     return shifts[diff % 3]
 
-# --- 세션 상태 및 URL 파라미터 동기화 (원본 유지) ---
+# --- 세션 상태 및 URL 파라미터 동기화 ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
@@ -32,12 +32,12 @@ url_params = st.query_params
 if "d" in url_params:
     try:
         url_d = datetime.strptime(url_params["d"], "%Y-%m-%d").date()
-        if st.session_state.target_date != url_d or not st.session_state.search_performed:
+        if st.session_state.target_date != url_d:
             st.session_state.target_date = url_d
             st.session_state.search_performed = True
     except: pass
 
-# 2. CSS 스타일 (사용자 원본 소스 100% 복사)
+# 2. CSS 스타일 (사용자 원본 스타일 100% 유지 + TOP 버튼 위치 수정)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -71,19 +71,22 @@ st.markdown("""
     .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
     .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 6px; }
 
-    /* 강의실 개방 지침 전용 */
+    /* 강의실 개방 지침 스타일 */
     .open-card { border: 2px dashed #2E5077; padding: 15px; border-radius: 10px; margin-bottom: 15px; background-color: #F8FAFF; }
     .open-bu-title { font-weight: 800; color: #2E5077; font-size: 19px !important; margin-bottom: 10px; border-bottom: 2px solid #D1D9E6; }
     .open-room-name { font-weight: bold; color: #333; font-size: 17px !important; margin-bottom: 3px; }
     .open-room-time { font-size: 16px !important; color: #FF4B4B; font-weight: bold; margin-bottom: 5px; }
     .open-room-note { font-size: 14px !important; color: #444; line-height: 1.4; background: #eee; padding: 5px 8px; border-radius: 4px; }
+
+    /* TOP 버튼 위치 상향 조정 */
+    .top-btn { position:fixed; bottom:80px; right:20px; z-index:999; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 입력부 (원본 그대로)
+# 3. 입력부
 with st.form("search_form"):
     selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
     st.markdown('**🏢 건물 선택**')
@@ -99,7 +102,7 @@ with st.form("search_form"):
         st.query_params["d"] = selected_date.strftime("%Y-%m-%d")
         st.rerun()
 
-# 4. 데이터 로직 (생략/유지)
+# 4. 데이터 로직
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -109,17 +112,19 @@ def get_data(d):
         return pd.DataFrame(res.json().get('res', [])) if res.status_code == 200 else pd.DataFrame()
     except: return pd.DataFrame()
 
-# 5. 결과 출력 (원본 디자인 복구 + 근무조 배지 추가)
+# 5. 결과 출력
 if st.session_state.search_performed:
-    st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
+    # 검색결과로 이동하기 위한 앵커 (위치 최적화)
+    st.markdown('<div id="result-anchor" style="margin-bottom:10px;"></div>', unsafe_allow_html=True)
+    
     d = st.session_state.target_date
     df_raw = get_data(d)
-    shift = get_work_shift(d) # 근무조 계산
+    shift = get_work_shift(d)
+    is_weekend = d.isoweekday() in [6, 7]
     
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
-    # [수정] 원본 디자인에 근무조 배지만 깔끔하게 추가
     st.markdown(f"""
     <div class="date-display-box">
         <span class="res-main-title">성의교정 대관 현황</span>
@@ -158,6 +163,46 @@ if st.session_state.search_performed:
                                 <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
                                 <div class="bottom-info"><span>🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div>
                             </div>""", unsafe_allow_html=True)
-        if not has_content: st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
+        if not has_content:
+            st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
-st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
+    # --- 6. 강의실 개방 지침 (누락 복구) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
+    
+    sh_list = []
+    if not is_weekend:
+        sh_list.append({"r": "421, 422, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
+        if date(d.year, 3, 2) <= d <= date(d.year, 4, 30):
+            sh_list.append({"r": "402, 403, 404, 405, 406, 407호", "t": "08:00 ~ 20:00 (3/2~4/30)", "n": "첫 순찰 개방 / 마지막 순찰 잠금"})
+    if date(d.year, 2, 7) <= d <= date(d.year, 4, 24):
+        sh_note = "평일: 직원 개방 / 야간 21:00 폐쇄만" if not is_weekend else "주말: 학생 요청 시 해당 시간만 개방"
+        sh_list.append({"r": "801호", "t": "09:00 ~ 21:00 (2/7~4/24)", "n": sh_note})
+
+    if sh_list:
+        sh_html = "".join([f'<div style="margin-bottom:12px;"><div class="open-room-name">• {i["r"]}</div><div class="open-room-time">⏰ {i["t"]}</div><div class="open-room-note">{i["n"]}</div></div>' for i in sh_list])
+        st.markdown(f'<div class="open-card"><div class="open-bu-title">🏢 성의회관</div>{sh_html}</div>', unsafe_allow_html=True)
+
+    bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
+    st.markdown(f"""
+    <div class="open-card">
+        <div class="open-bu-title">🏢 서울성모별관</div>
+        <div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div>
+        <div class="open-room-time">⏰ {bg_status}</div>
+        <div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday() == 5 else "평일/주말 순찰 지침 준수"}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 검색 결과로 자동 스크롤 (자바스크립트 강화)
+    components.html("""
+        <script>
+            var element = window.parent.document.getElementById('result-anchor');
+            if (element) { element.scrollIntoView({behavior: 'smooth', block: 'start'}); }
+        </script>
+    """, height=0)
+
+# 마지막 빈 줄 3개
+for _ in range(3): st.write("")
+
+# TOP 버튼 (위치 위로 조정)
+st.markdown("""<div class="top-btn"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
