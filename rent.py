@@ -70,7 +70,7 @@ st.markdown("""
         text-decoration: none !important; color: #1E3A5F; font-weight: bold; 
         border-right: 1px solid #F0F0F0; font-size: 13px;
     }
-    .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 20px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
+    .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px; border-radius: 5px; margin-bottom: 10px; background: #fff; line-height: 1.5; }
     .sat { color: #0000FF !important; }
     .sun { color: #FF0000 !important; }
