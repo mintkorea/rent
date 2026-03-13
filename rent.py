@@ -171,14 +171,14 @@ if st.session_state.search_performed:
 
     # --- 6. 강의실 개방 지침 (확대 버전) ---
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="building-header">🔓 초회 순찰 개방 지침</div>', unsafe_allow_html=True)
+    st.markdown('<div class="building-header">🔓 강의실 개방 일람 및 지침</div>', unsafe_allow_html=True)
 
     is_p_4th = (date(d.year, 3, 2) <= d <= date(d.year, 4, 30))
     is_p_801 = (date(d.year, 2, 7) <= d <= date(d.year, 4, 24))
 
     sh_list = []
     if not is_weekend:
-        sh_list.append({"r": "421, 422, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
+        sh_list.append({"r": "303, 421, 422, 504, 521, 522호", "t": "주중: 오전 개방 / 오후 원칙적 폐쇄", "n": "학생 요청 시 무리한 퇴실 독촉 금지"})
         if is_p_4th:
             sh_list.append({"r": "402, 403, 404, 405, 406, 407호", "t": "08:00 ~ 20:00 (3/2~4/30)", "n": "첫 순찰 개방 / 마지막 순찰 잠금"})
     if is_p_801:
