@@ -21,7 +21,7 @@ if 'target_date' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = True
 
-# 2. CSS 스타일 (작업 전 원본 스타일)
+# 2. CSS 스타일
 st.markdown("""
 <style>
     .main-title { 
@@ -29,7 +29,7 @@ st.markdown("""
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        padding-top: 20px;
+        padding-top: 10px;
         margin-bottom: 25px !important; 
     }
     .block-container { padding-top: 1rem !important; padding-bottom: 5rem !important; max-width: 550px !important; }
@@ -60,16 +60,21 @@ st.markdown("""
 # 메인 제목
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 사이드바 (사용자님이 설정하신 링크 메뉴)
-with st.sidebar:
-    st.markdown("### 🏢 바로가기 메뉴")
-    st.markdown("""
-        <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">🏫 성의교정 대관신청현황</a>
-        <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">🔐 S-CUBE 통합인증(SSO)</a>
-        <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📂 S-tec 개인정보관리</a>
-        <a href="https://www.onsafe.co.kr/" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📖 온세이프(법정교육)</a>
-        <a href="https://todayshift.com/" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📅 오늘근무(교대달력)</a>
-    """, unsafe_allow_html=True)
+# 3. 상단 슬라이딩 링크 바
+components.html("""
+<style>
+    .scroll-container { display: flex; overflow-x: auto; white-space: nowrap; padding: 10px 0; gap: 10px; scrollbar-width: none; -ms-overflow-style: none; }
+    .scroll-container::-webkit-scrollbar { display: none; }
+    .link-card { display: inline-block; padding: 8px 18px; background: #1E3A5F; color: white !important; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
+</style>
+<div class="scroll-container">
+    <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" class="link-card">🏫 대관신청</a>
+    <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" class="link-card">🔐 S-CUBE</a>
+    <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" class="link-card">📂 S-tec 관리</a>
+    <a href="https://www.onsafe.co.kr/" target="_blank" class="link-card">📖 온세이프</a>
+    <a href="https://todayshift.com/" target="_blank" class="link-card">📅 오늘근무</a>
+</div>
+""", height=60)
 
 # 4. 조회 설정 폼
 with st.form("search_form"):
