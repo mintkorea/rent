@@ -11,6 +11,12 @@ def today_kst(): return datetime.now(KST).date()
 
 st.set_page_config(page_title="성의교정 대관 조회(M)", page_icon="🏫", layout="centered")
 
+# 요일 코드 변환 함수
+def get_weekday_names(codes):
+    days = {"1":"월", "2":"화", "3":"수", "4":"목", "5":"금", "6":"토", "7":"일"}
+    if not codes: return ""
+    return ",".join([days.get(c.strip(), "") for c in str(codes).split(",") if c.strip() in days])
+
 # 근무조 계산 로직
 def get_work_shift(d):
     anchor = date(2026, 3, 13)
@@ -36,7 +42,7 @@ if "d" in url_params:
         st.session_state.search_performed = True
     except: pass
 
-# 2. CSS 스타일 (사용자 원본 100% + TOP 버튼 위치 상향)
+# 2. CSS 스타일
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -68,16 +74,13 @@ st.markdown("""
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
     .status-badge { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; float: right; }
     .status-y { background-color: #FFF4E5; color: #B25E09; } .status-n { background-color: #E8F0FE; color: #1967D2; }
-    .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 6px; }
+    .bottom-info { font-size: 12px; color: #666; margin-top: 8px; display: flex; justify-content: space-between; border-top: 1px solid #f0f0f0; padding-top: 6px; align-items: center; }
 
-    /* 강의실 개방 지침 스타일 */
     .open-card { border: 2px dashed #2E5077; padding: 15px; border-radius: 10px; margin-bottom: 15px; background-color: #F8FAFF; }
     .open-bu-title { font-weight: 800; color: #2E5077; font-size: 19px !important; margin-bottom: 10px; border-bottom: 2px solid #D1D9E6; }
     .open-room-name { font-weight: bold; color: #333; font-size: 17px !important; margin-bottom: 3px; }
     .open-room-time { font-size: 16px !important; color: #FF4B4B; font-weight: bold; margin-bottom: 5px; }
     .open-room-note { font-size: 14px !important; color: #444; line-height: 1.4; background: #eee; padding: 5px 8px; border-radius: 4px; }
-
-    /* TOP 버튼 */
     .top-btn { position:fixed; bottom:80px; right:20px; z-index:999; }
 </style>
 """, unsafe_allow_html=True)
@@ -114,12 +117,10 @@ def get_data(d):
 # 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
-    
     d = st.session_state.target_date
     df_raw = get_data(d)
     shift = get_work_shift(d)
     is_weekend = d.isoweekday() in [6, 7]
-    
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
@@ -131,7 +132,7 @@ if st.session_state.search_performed:
     </div>
     <div class="nav-link-bar">
         <a href="./?d={(d-timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-item">◀ Before</a>
-        <a href="./?d={date(2026,3,13).strftime('%Y-%m-%d')}" target="_self" class="nav-item">Today</a>
+        <a href="./?d={today_kst().strftime('%Y-%m-%d')}" target="_self" class="nav-item">Today</a>
         <a href="./?d={(d+timedelta(1)).strftime('%Y-%m-%d')}" target="_self" class="nav-item">Next ▶</a>
     </div>
     """, unsafe_allow_html=True)
@@ -153,7 +154,23 @@ if st.session_state.search_performed:
                         st.markdown(f'<div class="section-title">{title}</div>', unsafe_allow_html=True)
                         for _, row in ev_df.sort_values(by='startTime').iterrows():
                             s_cls, s_txt = ("status-y", "예약확정") if row['status'] == 'Y' else ("status-n", "신청대기")
-                            st.markdown(f"""<div class="event-card"><span class="status-badge {s_cls}">{s_txt}</span><div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div><div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div><div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div><div class="bottom-info"><span>🗓️ {row['startDt']}</span><span>👥 {row['mgDeptNm']}</span></div></div>""", unsafe_allow_html=True)
+                            if title == "🗓️ 기간 대관":
+                                date_info = f"🗓️ {row['startDt']}~{row['endDt']} <b style='color:#2E5077;'>({get_weekday_names(row['allowDay'])})</b>"
+                            else:
+                                date_info = f"🗓️ {row['startDt']}"
+                            
+                            st.markdown(f"""
+                            <div class="event-card">
+                                <span class="status-badge {s_cls}">{s_txt}</span>
+                                <div style="font-size:16px; font-weight:bold; color:#1E3A5F; margin-bottom:4px;">📍 {row['placeNm']}</div>
+                                <div style="color:#FF4B4B; font-weight:bold; font-size:15px; margin:4px 0;">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                                <div style="font-size:14px; color:#333; font-weight:bold;">📄 {row['eventNm']}</div>
+                                <div class="bottom-info">
+                                    <span>{date_info}</span>
+                                    <span style="font-weight:bold;">👤 {row['mgDeptNm']}</span>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
         if not has_content: st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">대관 내역이 없습니다.</div>', unsafe_allow_html=True)
 
     # 개방 지침
@@ -172,14 +189,9 @@ if st.session_state.search_performed:
     bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
     st.markdown(f"""<div class="open-card"><div class="open-bu-title">🏢 서울성모별관</div><div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div><div class="open-room-time">⏰ {bg_status}</div><div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday()==5 else "평일/주말 순찰 지침 준수"}</div></div>""", unsafe_allow_html=True)
 
-    # [보강] TOP 버튼 클릭 후 검색 시에도 이동하게 하는 자바스크립트
     components.html("""
         <script>
             setTimeout(function() {
-                const url = window.parent.location.href;
-                if (url.indexOf('#') > -1) {
-                    window.parent.history.replaceState('', document.title, url.split('#')[0]);
-                }
                 window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
             }, 300);
         </script>
