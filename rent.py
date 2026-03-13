@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
-st.set_page_config(page_title="성의교정 대관 조회(M)", layout="centered")
+st.set_page_config(page_title="성의교정 대관 조회(M)", page_icon="🏫", layout="centered")
 
 # 근무조 계산 로직
 def get_work_shift(d):
