@@ -15,75 +15,71 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 세션 상태 설정 (자동 조회 활성화) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = True
 
-# 2. CSS 스타일 (제목 위치 복구 및 스크롤 보정)
+# 2. CSS 스타일 (간격 최적화)
 st.markdown("""
 <style>
-    /* 제목 위치는 처음 그대로, 하지만 TOP 이동 시 가려짐 방지 */
     .main-title { 
-        font-size: 24px !important; 
-        font-weight: 800; 
-        text-align: center; 
-        color: #1E3A5F; 
-        padding-top: 15px;
-        margin-bottom: 25px !important;
-        scroll-margin-top: 100px; /* TOP 클릭 시 상단에 100px 여유를 둠 */
+        font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; 
+        padding-top: 10px; margin-bottom: 15px !important;
+        scroll-margin-top: 100px;
     }
-    
     .block-container { padding-top: 1rem !important; padding-bottom: 5rem !important; max-width: 550px !important; }
-    
-    /* Streamlit 기본 헤더 투명화 */
     header[data-testid="stHeader"] { background: rgba(255,255,255,0); }
 
-    /* 사이드바 링크 스타일 (버튼 형태) */
+    /* 사이드바 스타일 */
     .sidebar-link {
-        display: block;
-        padding: 12px 15px;
-        margin-bottom: 8px;
-        background-color: #F0F4F8;
-        color: #1E3A5F !important;
-        text-decoration: none !important;
-        border-radius: 8px;
-        font-weight: bold;
-        font-size: 14px;
-        transition: 0.3s;
+        display: block; padding: 12px 15px; margin-bottom: 8px;
+        background-color: #F0F4F8; color: #1E3A5F !important;
+        text-decoration: none !important; border-radius: 8px; font-weight: bold; font-size: 14px;
     }
-    .sidebar-link:hover { background-color: #D1D9E6; }
 
-    /* 결과 섹션 스타일 */
+    /* 건물 헤더 간격 축소 */
+    .building-header { 
+        font-size: 17px; font-weight: bold; color: #2E5077; 
+        margin-top: 10px !important; /* 위 간격 대폭 축소 */
+        margin-bottom: 8px !important; 
+        border-bottom: 2px solid #2E5077; padding-bottom: 3px; 
+    }
+
+    /* 카드 및 내역 없음 박스 간격 축소 */
+    .event-card { 
+        border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; 
+        padding: 10px; border-radius: 5px; margin-bottom: 6px !important; 
+        background: #fff; line-height: 1.4; 
+    }
+    .no-data { 
+        color: #999; text-align: center; padding: 8px; 
+        border: 1px dashed #eee; font-size: 12px; margin-bottom: 5px;
+    }
+
     .date-display-box { 
-        text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
+        text-align: center; background-color: #F8FAFF; padding: 12px 10px 5px 10px; 
         border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none;
     }
     .nav-link-bar {
         display: flex; width: 100%; background: white; 
         border: 1px solid #D1D9E6; border-radius: 0 0 10px 10px; 
-        margin-bottom: 25px; overflow: hidden;
+        margin-bottom: 15px; overflow: hidden;
     }
-    .nav-item {
-        flex: 1; text-align: center; padding: 10px 0;
-        text-decoration: none !important; color: #1E3A5F; font-weight: bold; 
-        border-right: 1px solid #F0F0F0; font-size: 13px;
-    }
-    .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px; border-radius: 5px; margin-bottom: 10px; background: #fff; line-height: 1.5; }
-    .sat { color: #0000FF !important; }
-    .sun { color: #FF0000 !important; }
+    .nav-item { flex: 1; text-align: center; padding: 8px 0; text-decoration: none !important; color: #1E3A5F; font-weight: bold; font-size: 13px; }
+    .sat { color: #0000FF !important; } .sun { color: #FF0000 !important; }
+
+    /* Streamlit 고유의 엘리먼트 간 여백 강제 제거 */
+    [data-testid="stVerticalBlock"] > div { padding-top: 0rem !important; padding-bottom: 0.2rem !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 메인 제목 (ID 부여로 TOP 버튼과 연결)
 st.markdown('<div class="main-title" id="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 사이드바 (링크 메뉴)
+# 3. 사이드바
 with st.sidebar:
     st.markdown("### 🏢 바로가기 메뉴")
-    st.markdown(f"""
+    st.markdown("""
         <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" class="sidebar-link">🏫 성의교정 대관신청현황</a>
         <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" class="sidebar-link">🔐 S-CUBE 통합인증(SSO)</a>
         <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" class="sidebar-link">📂 S-tec 개인정보관리</a>
@@ -94,22 +90,19 @@ with st.sidebar:
 # 4. 조회 설정 폼
 with st.form("search_form"):
     selected_date = st.date_input("조회 날짜", value=st.session_state.target_date)
-    
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
     
-    st.markdown('**🗓️ 대관 유형**')
     c1, c2 = st.columns(2)
     show_t = c1.checkbox("당일", value=True, key="chk_t")
     show_p = c2.checkbox("기간", value=True, key="chk_p")
-    
     submit = st.form_submit_button("🔍 검색", use_container_width=True)
     if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
 
-# 5. 데이터 가져오기 및 출력 로직
+# 5. 데이터 로직 및 출력
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -120,19 +113,18 @@ def get_data(d):
     except: return pd.DataFrame()
 
 if st.session_state.search_performed:
-    st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="result-anchor"></div>', unsafe_allow_html=True)
     d = st.session_state.target_date
     df_raw = get_data(d)
     
-    # 날짜 네비게이션
     prev_d, next_d, today_d = (d - timedelta(1)).strftime('%Y-%m-%d'), (d + timedelta(1)).strftime('%Y-%m-%d'), today_kst().strftime('%Y-%m-%d')
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
     st.markdown(f"""
     <div class="date-display-box">
-        <span style="font-size: 19px; font-weight: bold; color: #1E3A5F;">성과교정 대관 현황</span><br>
-        <span style="font-size: 17px; font-weight: bold;">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
+        <span style="font-size: 18px; font-weight: bold; color: #1E3A5F;">성과교정 대관 현황</span><br>
+        <span style="font-size: 16px; font-weight: bold;">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
     </div>
     <div class="nav-link-bar">
         <a href="./?d={prev_d}" target="_self" class="nav-item">◀ Before</a>
@@ -143,6 +135,7 @@ if st.session_state.search_performed:
 
     target_wd = str(d.weekday() + 1)
     for bu in selected_bu_list:
+        # 건물을 표시할 때 st.markdown 간의 간격을 최소화
         st.markdown(f'<div class="building-header">🏢 {bu}</div>', unsafe_allow_html=True)
         has_content = False
         if not df_raw.empty:
@@ -157,19 +150,17 @@ if st.session_state.search_performed:
                         has_content = True
                         st.markdown(f"""
                         <div class="event-card">
-                            <div style="font-size:16px; font-weight:bold; color:#1E3A5F;">📍 {row['placeNm']}</div>
-                            <div style="color:#FF4B4B; font-weight:bold; font-size:15px;">⏰ {row['startTime']} ~ {row['endTime']}</div>
-                            <div style="font-size:14px; color:#333; font-weight:bold; margin-top:3px;">📄 {row['eventNm']}</div>
-                            <div style="font-size:12px; color:#666; border-top:1px solid #eee; margin-top:8px; padding-top:4px;">👥 {row['mgDeptNm']}</div>
+                            <div style="font-size:15px; font-weight:bold; color:#1E3A5F;">📍 {row['placeNm']}</div>
+                            <div style="color:#FF4B4B; font-weight:bold; font-size:14px;">⏰ {row['startTime']} ~ {row['endTime']}</div>
+                            <div style="font-size:13px; color:#333; margin-top:2px;">📄 {row['eventNm']}</div>
                         </div>""", unsafe_allow_html=True)
         if not has_content:
-            st.markdown('<div style="color:#999; text-align:center; padding:15px; border:1px dashed #eee; font-size:13px;">내역 없음</div>', unsafe_allow_html=True)
+            st.markdown('<div class="no-data">내역 없음</div>', unsafe_allow_html=True)
 
-    # 검색 시 결과 위치로 스크롤
     components.html("""<script>window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});</script>""", height=0)
 
-# 6. 최하단 TOP 버튼 (제목으로 바로 연결)
-st.markdown("""
+# 6. TOP 버튼
+st.markdown(f"""
 <div style="position:fixed; bottom:25px; right:20px; z-index:1000;">
     <a href="#main-title" target="_self" style="
         display:block; width:50px; height:50px; line-height:50px; 
