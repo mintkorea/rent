@@ -77,38 +77,32 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-
-# 3. 입력부 (사용자 원본 로직 유지)
-with st.form("search_form"):
-    selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
-    st.markdown('**🏢 건물 선택**')
-    # 요청하신 순서대로 리스트 배치 가능 (성의회관 -> 의생명 -> 옴니버스 순)
-    ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
-    selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
-    
-    st.markdown('**🗓️ 대관 유형**')
-    c1, c2 = st.columns(2)
-    show_t = c1.checkbox("당일", value=True, key="chk_t")
-    show_p = c2.checkbox("기간", value=True, key="chk_p")
-    
-    # 버튼 문구 수정
-    submit = st.form_submit_button("🔍 검색", use_container_width=True)
-    if submit:
-        st.session_state.target_date = selected_date
-        st.session_state.search_performed = True
-        st.query_params.clear()
-
-# --- 기존 입력부(Form) 끝나는 지점 ---
-    submit = st.form_submit_button("🔍 검색", use_container_width=True)
-    if submit:
-        st.session_state.target_date = selected_date
-        st.session_state.search_performed = True
-        st.query_params.clear()
-
-# --- 여기서부터 추가 (슬라이딩 링크 메뉴) ---
-st.sidebar.markdown("---") # 구분선
-
+# 3. 입력부 및 사이드바 구성 (에러 수정 통합본)
 with st.sidebar:
+    st.markdown('<div style="margin-top:-30px;"></div>', unsafe_allow_html=True) # 상단 여백 조절
+    
+    with st.form("search_form"):
+        st.markdown('### 🔍 조회 설정')
+        selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
+        
+        st.markdown('**🏢 건물 선택**')
+        ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
+        selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
+        
+        st.markdown('**🗓️ 대관 유형**')
+        c1, c2 = st.columns(2)
+        show_t = c1.checkbox("당일", value=True, key="chk_t")
+        show_p = c2.checkbox("기간", value=True, key="chk_p")
+        
+        submit = st.form_submit_button("🔍 검색", use_container_width=True)
+        if submit:
+            st.session_state.target_date = selected_date
+            st.session_state.search_performed = True
+            st.query_params.clear()
+
+    # --- 🔗 빠른 링크 바로가기 (슬라이딩 메뉴) ---
+    # 폼 외부에 배치하여 검색과 독립적으로 작동하며, 항상 닫혀 있음
+    st.markdown("---")
     with st.expander("🔗 빠른 링크 바로가기", expanded=False):
         st.markdown(f"""
             <div style="line-height: 2.2; font-size: 14px;">
@@ -119,7 +113,7 @@ with st.sidebar:
                 <a href="https://todayshift.com/" target="_blank" style="text-decoration: none; color: #1E3A5F;">📅 오늘근무(교대달력)</a>
             </div>
         """, unsafe_allow_html=True)
-# --- 여기까지 추가 ---
+
 
 
 
