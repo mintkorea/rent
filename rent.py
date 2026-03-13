@@ -77,28 +77,6 @@ st.markdown("""
 st.markdown('<div id="top-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 사이드바 설정 부분
-with st.sidebar:
-    st.markdown("## 🏢 성의교정 대관")
-    
-
-    st.write("---")
-
-    # 🔗 슬라이딩 방식의 빠른 링크 메뉴 (이모지 활용)
-    with st.expander("🔗 빠른 링크 바로가기", expanded=False):
-        st.markdown(f"""
-            <div style="line-height: 2.5;">
-                <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" style="text-decoration: none;">🏫 성의교정 대관신청현황</a><br>
-                <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" style="text-decoration: none;">🔐 S-CUBE 통합인증(SSO)</a><br>
-                <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" style="text-decoration: none;">📂 S-tec 개인정보관리</a><br>
-                <a href="https://www.onsafe.co.kr/" target="_blank" style="text-decoration: none;">📖 온세이프(법정교육)</a><br>
-                <a href="https://todayshift.com/" target="_blank" style="text-decoration: none;">📅 오늘근무(교대달력)</a>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.write("---")
-
-
 
 # 3. 입력부 (사용자 원본 로직 유지)
 with st.form("search_form"):
