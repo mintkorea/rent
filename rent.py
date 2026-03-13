@@ -36,7 +36,7 @@ if "d" in url_params:
         st.session_state.search_performed = True
     except: pass
 
-# 2. CSS 스타일 (사용자 원본 100% + TOP 버튼 위치 상향)
+# 2. CSS 스타일 (기존 스타일 유지 + 슬라이딩 메뉴 추가)
 st.markdown("""
 <style>
     #top-anchor { position: absolute; top: 0; left: 0; }
@@ -101,7 +101,7 @@ with st.form("search_form"):
         st.query_params["d"] = selected_date.strftime("%Y-%m-%d")
         st.rerun()
 
-# 4. 데이터 로직
+# 4. 데이터 로직 (생략 없이 유지)
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -114,12 +114,10 @@ def get_data(d):
 # 5. 결과 출력
 if st.session_state.search_performed:
     st.markdown('<div id="result-anchor" style="padding-top:10px;"></div>', unsafe_allow_html=True)
-    
     d = st.session_state.target_date
     df_raw = get_data(d)
     shift = get_work_shift(d)
     is_weekend = d.isoweekday() in [6, 7]
-    
     w_idx = d.weekday()
     w_str, w_class = ['월','화','수','목','금','토','일'][w_idx], ("sat" if w_idx == 5 else ("sun" if w_idx == 6 else ""))
     
@@ -146,7 +144,6 @@ if st.session_state.search_performed:
                 t_ev = bu_df[bu_df['startDt'] == bu_df['endDt']] if show_t else pd.DataFrame()
                 p_ev = bu_df[bu_df['startDt'] != bu_df['endDt']] if show_p else pd.DataFrame()
                 v_p_ev = p_ev[p_ev['allowDay'].apply(lambda x: target_wd in [day.strip() for day in str(x).split(",")])] if not p_ev.empty else pd.DataFrame()
-                
                 for ev_df, title in [(t_ev, "📌 당일 대관"), (v_p_ev, "🗓️ 기간 대관")]:
                     if not ev_df.empty:
                         has_content = True
@@ -172,18 +169,24 @@ if st.session_state.search_performed:
     bg_status = "월~금: 오전 개방 / 오후 폐쇄" if not is_weekend else "주말: 대관 확인 후 개방"
     st.markdown(f"""<div class="open-card"><div class="open-bu-title">🏢 서울성모별관</div><div class="open-room-name">• 1201, 1202, 1203, 1204, 1205, 1206호</div><div class="open-room-time">⏰ {bg_status}</div><div class="open-room-note">{"1206호(금) 10시 교육 예정" if d.isoweekday()==5 else "평일/주말 순찰 지침 준수"}</div></div>""", unsafe_allow_html=True)
 
-    # [보강] TOP 버튼 클릭 후 검색 시에도 이동하게 하는 자바스크립트
-    components.html("""
-        <script>
-            setTimeout(function() {
-                const url = window.parent.location.href;
-                if (url.indexOf('#') > -1) {
-                    window.parent.history.replaceState('', document.title, url.split('#')[0]);
-                }
-                window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
-            }, 300);
-        </script>
-    """, height=0)
+# 6. 하단 슬라이딩 링크 메뉴 (추가된 부분)
+st.markdown("---")
+with st.expander("🔗 유관 시스템 바로가기", expanded=False):
+    c1, c2, c3 = st.columns(3)
+    c1.markdown("[대관신청](https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do)")
+    c1.markdown("[S-CUBE](https://scube.s-tec.co.kr/sso/user/login/view)")
+    c2.markdown("[S-tec 관리](https://pms.s-tec.co.kr/mainfrm.php)")
+    c2.markdown("[온세이프](https://www.onsafe.co.kr/)")
+    c3.markdown("[오늘근무](https://todayshift.com/)")
 
-for _ in range(3): st.write("")
+# TOP 버튼 (위치 유지)
 st.markdown("""<div class="top-btn"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
+
+# 자동 스크롤 자바스크립트
+components.html("""
+    <script>
+        setTimeout(function() {
+            window.parent.document.getElementById('result-anchor').scrollIntoView({behavior: 'smooth', block: 'start'});
+        }, 300);
+    </script>
+""", height=0)
