@@ -208,4 +208,5 @@ if st.session_state.search_performed:
             sh_list.append({"r": "402, 403, 404, 405, 406, 407호", "t": "08:00 ~ 20:00 (3/2~4/30)", "n": "첫 순찰 개방 / 마지막 순찰 잠금"})
     if is_p_801:
         sh_note = "평일: 직원 개방 / 야간 21:00 폐쇄만" if not is_weekend else "주말: 학생 요청 시 해당 시간만 개방"
-        sh_list.append({"r": "801호", "t": "09
+        # 아래 한 줄이 잘리지 않고 정확히 입력되어야 합니다.
+        sh_list.append({"r": "801호", "t": "09:00 ~ 21:00 (2/7~4/24)", "n": sh_note})
