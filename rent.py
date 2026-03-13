@@ -5,22 +5,36 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 설정
+# 1. 브라우저 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
-st.set_page_config(page_title="성의교정 대관 현황(M)", page_icon="🏫", layout="centered")
+st.set_page_config(
+    page_title="성의교정 대관 현황(M)", 
+    page_icon="🏫", 
+    layout="centered"
+)
 
+# --- 세션 상태 설정 (자동 조회 활성화) ---
 if 'target_date' not in st.session_state:
     st.session_state.target_date = today_kst()
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = True
 
-# 2. 스타일 (작업 전의 안정적인 레이아웃)
+# 2. CSS 스타일
 st.markdown("""
 <style>
-    .main-title { font-size: 24px !important; font-weight: 800; text-align: center; color: #1E3A5F; margin-bottom: 20px !important; }
-    .block-container { padding: 1rem 1.2rem !important; max-width: 500px !important; }
+    .main-title { 
+        font-size: 24px !important; 
+        font-weight: 800; 
+        text-align: center; 
+        color: #1E3A5F; 
+        padding-top: 10px;
+        margin-bottom: 25px !important; 
+    }
+    .block-container { padding-top: 1rem !important; padding-bottom: 5rem !important; max-width: 550px !important; }
+    
+    header[data-testid="stHeader"] { background: rgba(255,255,255,0); }
     
     .date-display-box { 
         text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; 
@@ -36,28 +50,34 @@ st.markdown("""
         text-decoration: none !important; color: #1E3A5F; font-weight: bold; 
         border-right: 1px solid #F0F0F0; font-size: 13px;
     }
-    .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 15px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; margin-bottom: 12px; }
-    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin-bottom: 12px !important; background-color: #ffffff; line-height: 1.4 !important; }
+    .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 20px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
+    .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px; border-radius: 5px; margin-bottom: 10px; background: #fff; line-height: 1.5; }
     .sat { color: blue; } .sun { color: red; }
 </style>
 """, unsafe_allow_html=True)
 
+# 메인 제목
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. [사이드바] - 링크만 배치
-with st.sidebar:
-    st.markdown("### 🔗 바로가기")
-    st.markdown("""
-        - [🏫 성의교정 대관신청현황](https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do)
-        - [🔐 S-CUBE 통합인증(SSO)](https://scube.s-tec.co.kr/sso/user/login/view)
-        - [📂 S-tec 개인정보관리](https://pms.s-tec.co.kr/mainfrm.php)
-        - [📖 온세이프(법정교육)](https://www.onsafe.co.kr/)
-        - [📅 오늘근무(교대달력)](https://todayshift.com/)
-    """)
+# 3. 상단 슬라이딩 링크 바
+components.html("""
+<style>
+    .scroll-container { display: flex; overflow-x: auto; white-space: nowrap; padding: 10px 0; gap: 10px; scrollbar-width: none; }
+    .scroll-container::-webkit-scrollbar { display: none; }
+    .link-card { padding: 8px 18px; background: #1E3A5F; color: white !important; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
+</style>
+<div class="scroll-container">
+    <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" class="link-card">🏫 대관신청</a>
+    <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" class="link-card">🔐 S-CUBE</a>
+    <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" class="link-card">📂 S-tec 관리</a>
+    <a href="https://www.onsafe.co.kr/" target="_blank" class="link-card">📖 온세이프</a>
+    <a href="https://todayshift.com/" target="_blank" class="link-card">📅 오늘근무</a>
+</div>
+""", height=60)
 
-# 4. [메인 상단] - 검색 폼
+# 4. 조회 설정 폼
 with st.form("search_form"):
-    selected_date = st.date_input("날짜", value=st.session_state.target_date, label_visibility="collapsed")
+    selected_date = st.date_input("조회 날짜", value=st.session_state.target_date)
     st.markdown('**🏢 건물 선택**')
     ALL_BU = ["성의회관", "의생명산업연구원", "옴니버스 파크", "옴니버스 파크 의과대학", "옴니버스 파크 간호대학", "대학본관", "서울성모별관"]
     selected_bu_list = [b for b in ALL_BU if st.checkbox(b, value=(b in ["성의회관", "의생명산업연구원"]), key=f"f_{b}")]
@@ -70,7 +90,7 @@ with st.form("search_form"):
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
 
-# 5. 데이터 및 출력 로직
+# 5. 데이터 처리 및 출력
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -90,7 +110,7 @@ if st.session_state.search_performed:
     
     st.markdown(f"""
     <div class="date-display-box">
-        <span style="font-size: 19px; font-weight: bold; color: #1E3A5F;">성의교정 대관 현황</span><br>
+        <span style="font-size: 19px; font-weight: bold; color: #1E3A5F;">성과교정 대관 현황</span><br>
         <span style="font-size: 17px; font-weight: bold;">{d.strftime("%Y.%m.%d")}.<span class="{w_class}">({w_str})</span></span>
     </div>
     <div class="nav-link-bar">
@@ -123,3 +143,15 @@ if st.session_state.search_performed:
                         </div>""", unsafe_allow_html=True)
         if not has_content:
             st.write("내역 없음")
+
+# 6. TOP 버튼
+st.markdown("""
+<div style="position:fixed; bottom:20px; right:20px; z-index:1000;">
+    <a href="#" target="_self" style="
+        display:block; width:50px; height:50px; line-height:50px; 
+        text-align:center; background:#1E3A5F; color:white !important; 
+        border-radius:50%; font-weight:bold; text-decoration:none; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size:13px;
+    ">TOP</a>
+</div>
+""", unsafe_allow_html=True)
