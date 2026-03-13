@@ -211,8 +211,3 @@ if st.session_state.search_performed:
 st.write("")
 st.write("")
 st.markdown("""<div style="position:fixed; bottom:25px; right:20px; z-index:999;"><a href="#top-anchor" style="display:block; background:#1E3A5F; color:white !important; width:45px; height:45px; line-height:45px; text-align:center; border-radius:50%; font-size:12px; font-weight:bold; text-decoration:none !important; box-shadow:2px 4px 8px rgba(0,0,0,0.3);">TOP</a></div>""", unsafe_allow_html=True)
-
-
-이 소스에 적용할 예정이고, 슬라이딩 항상 닫혀 있는 구조여야 하고
-추가로 슬라이딩에 검색 관련 검색관련 필터는 필요 없어
-추가해줘
