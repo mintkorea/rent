@@ -5,7 +5,7 @@ from datetime import datetime, date, timedelta
 import streamlit.components.v1 as components
 from zoneinfo import ZoneInfo
 
-# 1. 브라우저 설정
+# 1. 브라우저 및 언어 설정
 KST = ZoneInfo("Asia/Seoul")
 def today_kst(): return datetime.now(KST).date()
 
@@ -21,7 +21,7 @@ if 'target_date' not in st.session_state:
 if 'search_performed' not in st.session_state:
     st.session_state.search_performed = True
 
-# 2. CSS 스타일
+# 2. CSS 스타일 (작업 전 원본 스타일)
 st.markdown("""
 <style>
     .main-title { 
@@ -29,7 +29,7 @@ st.markdown("""
         font-weight: 800; 
         text-align: center; 
         color: #1E3A5F; 
-        padding-top: 10px;
+        padding-top: 20px;
         margin-bottom: 25px !important; 
     }
     .block-container { padding-top: 1rem !important; padding-bottom: 5rem !important; max-width: 550px !important; }
@@ -52,28 +52,24 @@ st.markdown("""
     }
     .building-header { font-size: 18px; font-weight: bold; color: #2E5077; margin-top: 20px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
     .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px; border-radius: 5px; margin-bottom: 10px; background: #fff; line-height: 1.5; }
-    .sat { color: blue; } .sun { color: red; }
+    .sat { color: blue !important; }
+    .sun { color: red !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # 메인 제목
 st.markdown('<div class="main-title">🏫 성의교정 시설 대관 현황</div>', unsafe_allow_html=True)
 
-# 3. 상단 슬라이딩 링크 바
-components.html("""
-<style>
-    .scroll-container { display: flex; overflow-x: auto; white-space: nowrap; padding: 10px 0; gap: 10px; scrollbar-width: none; }
-    .scroll-container::-webkit-scrollbar { display: none; }
-    .link-card { padding: 8px 18px; background: #1E3A5F; color: white !important; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
-</style>
-<div class="scroll-container">
-    <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" class="link-card">🏫 대관신청</a>
-    <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" class="link-card">🔐 S-CUBE</a>
-    <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" class="link-card">📂 S-tec 관리</a>
-    <a href="https://www.onsafe.co.kr/" target="_blank" class="link-card">📖 온세이프</a>
-    <a href="https://todayshift.com/" target="_blank" class="link-card">📅 오늘근무</a>
-</div>
-""", height=60)
+# 3. 사이드바 (사용자님이 설정하신 링크 메뉴)
+with st.sidebar:
+    st.markdown("### 🏢 바로가기 메뉴")
+    st.markdown("""
+        <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">🏫 성의교정 대관신청현황</a>
+        <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">🔐 S-CUBE 통합인증(SSO)</a>
+        <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📂 S-tec 개인정보관리</a>
+        <a href="https://www.onsafe.co.kr/" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📖 온세이프(법정교육)</a>
+        <a href="https://todayshift.com/" target="_blank" style="display:block; padding:10px; margin-bottom:5px; background:#F0F4F8; color:#1E3A5F; text-decoration:none; border-radius:5px;">📅 오늘근무(교대달력)</a>
+    """, unsafe_allow_html=True)
 
 # 4. 조회 설정 폼
 with st.form("search_form"):
@@ -86,11 +82,12 @@ with st.form("search_form"):
     show_t = c1.checkbox("당일", value=True)
     show_p = c2.checkbox("기간", value=True)
     
-    if st.form_submit_button("🔍 검색", use_container_width=True):
+    submit = st.form_submit_button("🔍 검색", use_container_width=True)
+    if submit:
         st.session_state.target_date = selected_date
         st.session_state.search_performed = True
 
-# 5. 데이터 처리 및 출력
+# 5. 데이터 가져오기 및 출력
 @st.cache_data(ttl=300)
 def get_data(d):
     url = "https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do"
@@ -142,7 +139,7 @@ if st.session_state.search_performed:
                             <div style="font-size:12px; color:#666; border-top:1px solid #eee; margin-top:8px; padding-top:4px;">👥 {row['mgDeptNm']}</div>
                         </div>""", unsafe_allow_html=True)
         if not has_content:
-            st.write("내역 없음")
+            st.markdown('<div style="color:#999; text-align:center; padding:15px;">내역 없음</div>', unsafe_allow_html=True)
 
 # 6. TOP 버튼
 st.markdown("""
