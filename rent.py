@@ -98,6 +98,32 @@ with st.form("search_form"):
         st.session_state.search_performed = True
         st.query_params.clear()
 
+# --- 기존 입력부(Form) 끝나는 지점 ---
+    submit = st.form_submit_button("🔍 검색", use_container_width=True)
+    if submit:
+        st.session_state.target_date = selected_date
+        st.session_state.search_performed = True
+        st.query_params.clear()
+
+# --- 여기서부터 추가 (슬라이딩 링크 메뉴) ---
+st.sidebar.markdown("---") # 구분선
+
+with st.sidebar:
+    with st.expander("🔗 빠른 링크 바로가기", expanded=False):
+        st.markdown(f"""
+            <div style="line-height: 2.2; font-size: 14px;">
+                <a href="https://songeui.catholic.ac.kr/ko/service/application-for-rental_calendar.do" target="_blank" style="text-decoration: none; color: #1E3A5F;">🏫 성의교정 대관신청현황</a><br>
+                <a href="https://scube.s-tec.co.kr/sso/user/login/view" target="_blank" style="text-decoration: none; color: #1E3A5F;">🔐 S-CUBE 통합인증(SSO)</a><br>
+                <a href="https://pms.s-tec.co.kr/mainfrm.php" target="_blank" style="text-decoration: none; color: #1E3A5F;">📂 S-tec 개인정보관리</a><br>
+                <a href="https://www.onsafe.co.kr/" target="_blank" style="text-decoration: none; color: #1E3A5F;">📖 온세이프(법정교육)</a><br>
+                <a href="https://todayshift.com/" target="_blank" style="text-decoration: none; color: #1E3A5F;">📅 오늘근무(교대달력)</a>
+            </div>
+        """, unsafe_allow_html=True)
+# --- 여기까지 추가 ---
+
+
+
+
 # 4. 데이터 로직 (생략/유지)
 @st.cache_data(ttl=300)
 def get_data(d):
