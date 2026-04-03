@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>성의교정 대관 현황(M)</title>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+        
+        :root { --primary: #1E3A5F; --accent: #FF4B4B; --bg: #f8fafc; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; padding: 0; color: #333; }
+        .container { max-width: 500px; margin: 0 auto; background: white; min-height: 100vh; padding-bottom: 50px; }
+        
+        /* 헤더 및 검색부 */
+        .header { background: white; padding: 20px 15px; text-align: center; font-size: 22px; font-weight: 800; color: var(--primary); }
+        .search-form { padding: 15px; background: #fff; border-bottom: 1px solid #eee; }
+        .date-input { width: 100%; padding: 12px; border: 1px solid #D1D9E6; border-radius: 8px; font-size: 16px; box-sizing: border-box; margin-bottom: 10px; }
+        .btn-submit { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; }
+
+        /* 결과 상단 정보 */
+        .date-display-box { text-align: center; background-color: #F8FAFF; padding: 15px 10px 8px 10px; border-radius: 12px 12px 0 0; border: 1px solid #D1D9E6; border-bottom: none; margin: 15px 15px 0 15px; }
+        .res-main-title { font-size: 18px; font-weight: 800; color: var(--primary); display: block; margin-bottom: 4px; }
+        .shift-badge { background: #FF9800; color: white; padding: 2px 10px; border-radius: 12px; font-size: 13px; margin-left: 5px; vertical-align: middle; }
+        .sat { color: #0000FF; } .sun { color: #FF0000; }
+
+        /* 네비게이션 바 */
+        .nav-link-bar { display: flex; background: white; border: 1px solid #D1D9E6; border-radius: 0 0 10px 10px; margin: 0 15px 25px 15px; overflow: hidden; }
+        .nav-item { flex: 1; text-align: center; padding: 12px 0; text-decoration: none; color: var(--primary); font-weight: bold; border-right: 1px solid #F0F0F0; font-size: 14px; cursor: pointer; }
+        .nav-item:last-child { border-right: none; }
+
+        /* 대관 카드 스타일 */
+        .building-header { font-size: 17px; font-weight: bold; color: #2E5077; margin: 20px 15px 10px; border-bottom: 2px solid #2E5077; padding-bottom: 5px; }
+        .section-title { font-size: 14px; font-weight: bold; color: #666; margin: 10px 15px; padding-left: 5px; border-left: 4px solid #ccc; }
+        .event-card { border: 1px solid #E0E0E0; border-left: 5px solid #2E5077; padding: 12px 14px; border-radius: 5px; margin: 0 15px 12px; background: white; position: relative; }
+        .status-badge { position: absolute; top: 12px; right: 14px; padding: 2px 8px; font-size: 11px; border-radius: 10px; font-weight: bold; }
+        .status-y { background-color: #FFF4E5; color: #B25E09; }
+        .status-n { background-color: #E8F0FE; color: #1967D2; }
+        .loc-name { font-size: 16px; font-weight: bold; color: var(--primary); margin-bottom: 4px; }
+        .time-info { color: var(--accent); font-weight: bold; font-size: 15px; margin: 4px 0; }
+        .event-name { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+        .bottom-info { font-size: 12px; color: #666; border-top: 1px solid #f0f0f0; padding-top: 6px; display: flex; justify-content: space-between; }
+
+        /* 개방 지침 카드 */
+        .open-card { border: 2px dashed #2E5077; padding: 15px; border-radius: 10px; margin: 15px; background-color: #F8FAFF; }
+        .open-bu-title { font-weight: 800; color: #2E5077; font-size: 18px; margin-bottom: 10px; border-bottom: 2px solid #D1D9E6; }
+        .open-room-name { font-weight: bold; font-size: 15px; margin-bottom: 3px; }
+        .open-room-time { font-size: 14px; color: var(--accent); font-weight: bold; margin-bottom: 5px; }
+        .open-room-note { font-size: 13px; color: #444; background: #eee; padding: 5px 8px; border-radius: 4px; margin-bottom: 10px; }
+
+        .no-data { text-align: center; color: #999; padding: 20px; font-size: 13px; }
+        .loading { text-align: center; padding: 50px; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">🏫 성의교정 시설 대관 현황</div>
+
+    <div class="search-form">
+        <input type="date" id="input-date" class="date-input">
+        <button class="btn-submit" onclick="performSearch()">🔍 대관 현황 조회</button>
+    </div>
+
+    <div id="loading-spinner" class="loading" style="display:none;">데이터를 불러오는 중...</div>
+
+    <div id="result-area">
+        <div id="rental-header"></div>
+        <div id="rental-list"></div>
+        <div id="opening-guideline"></div>
+    </div>
+</div>
+
+<script>
+    // [관리자 설정] 직접 요청하신 구글 시트 CSV 주소를 적용했습니다.
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi4T20_JgmIH8e5kIsaokmfTT0Fz7Ua2MS4YnBPmHoCIqtB0F7WpY00fXDbOifOu7WZEjXJm9iWCUT/pub?gid=1076151316&single=true&output=csv";
+
+    let allRentalData = [];
+    const buildings = ["성의회관", "의생명산업연구원", "옴니버스 파크", "대학본관", "서울성모별관"];
+
+    // 초기 실행
+    async function init() {
+        const today = dayjs().format('YYYY-MM-DD');
+        document.getElementById('input-date').value = today;
+        await loadDataFromSheet();
+        renderResult(today);
+    }
+
+    // 구글 시트 데이터 로드
+    async function loadDataFromSheet() {
+        document.getElementById('loading-spinner').style.display = 'block';
+        return new Promise((resolve) => {
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    allRentalData = results.data;
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    resolve();
+                }
+            });
+        });
+    }
+
+    function performSearch() {
+        const selDate = document.getElementById('input-date').value;
+        renderResult(selDate);
+        window.scrollTo({ top: document.getElementById('result-area').offsetTop - 20, behavior: 'smooth' });
+    }
+
+    function renderResult(dateStr) {
+        const d = dayjs(dateStr);
+        // 날짜 형식 일치 필터링 (CSV의 '날짜' 컬럼 기준)
+        const dayData = allRentalData.filter(r => r["날짜"] === dateStr);
+        const dayIdx = d.day();
+        const dayNames = ['일','월','화','수','목','금','토'];
+        const isWeekend = (dayIdx === 0 || dayIdx === 6);
+        
+        const shift = dayData.length > 0 ? dayData[0]["근무조"] : "정보없음";
+
+        // 1. 헤더 (날짜 및 근무조)
+        document.getElementById('rental-header').innerHTML = `
+            <div class="date-display-box">
+                <span class="res-main-title">조회 결과</span>
+                <span class="res-sub-title">${d.format('YYYY.MM.DD')}.<span class="${dayIdx===0?'sun':dayIdx===6?'sat':''}">(${dayNames[dayIdx]})</span>
+                <span class="shift-badge">근무 : ${shift}</span></span>
+            </div>
+            <div class="nav-link-bar">
+                <div class="nav-item" onclick="changeDate(-1)">◀ 이전날</div>
+                <div class="nav-item" onclick="changeDate(0)">오늘</div>
+                <div class="nav-item" onclick="changeDate(1)">다음날 ▶</div>
+            </div>
+        `;
+
+        // 2. 건물별 대관 리스트
+        let listHtml = "";
+        buildings.forEach(bu => {
+            const buRows = dayData.filter(r => r["건물명"] && r["건물명"].replace(/\s/g,'') === bu.replace(/\s/g,''));
+            listHtml += `<div class="building-header">🏢 ${bu} (${buRows.length}건)</div>`;
+            
+            if(buRows.length > 0) {
+                buRows.forEach(r => {
+                    const isConfirmed = r['상태'] === '확정';
+                    listHtml += `
+                        <div class="event-card">
+                            <span class="status-badge ${isConfirmed?'status-y':'status-n'}">${isConfirmed?'예약확정':'신청대기'}</span>
+                            <div class="loc-name">📍 ${r['장소']}</div>
+                            <div class="time-info">⏰ ${r['시간']}</div>
+                            <div class="event-name">📄 ${r['행사명']}</div>
+                            <div class="bottom-info">
+                                <span>🗓️ ${r['요일']}요일 대관</span>
+                                <span style="font-weight:bold;">👤 ${r['부서']}</span>
+                            </div>
+                        </div>`;
+                });
+            } else {
+                listHtml += `<div class="no-data">내역 없음</div>`;
+            }
+        });
+        document.getElementById('rental-list').innerHTML = listHtml;
+
+        // 3. 개방 지침 (파이썬 모바일 버전 로직)
+        renderGuidelines(d, isWeekend);
+    }
+
+    function renderGuidelines(d, isWeekend) {
+        let guideHtml = `<div class="building-header">🔓 강의실 개방 일람/지침</div>`;
+        let shItems = "";
+        if(!isWeekend) {
+            shItems += `<div class="open-room-name">• 421, 422, 521, 522호</div><div class="open-room-time">⏰ 주중: 오전 개방 / 오후 폐쇄</div><div class="open-room-note">학생 요청 시 무리한 퇴실 독촉 금지</div>`;
+        }
+        guideHtml += `
+            <div class="open-card">
+                <div class="open-bu-title">🏢 성의회관</div>
+                ${shItems || '<div class="no-data">주말 별도 지침 확인 요망</div>'}
+            </div>
+            <div class="open-card">
+                <div class="open-bu-title">🏢 서울성모별관</div>
+                <div class="open-room-name">• 1201 ~ 1206호</div>
+                <div class="open-room-time">⏰ ${isWeekend ? '주말: 대관 확인 후 개방' : '평일: 오전 개방 / 오후 폐쇄'}</div>
+                <div class="open-room-note">${d.day()===5 ? '금요일: 1206호 교육 일정 확인' : '상시 순찰 지침 준수'}</div>
+            </div>`;
+        document.getElementById('opening-guideline').innerHTML = guideHtml;
+    }
+
+    function changeDate(days) {
+        const current = dayjs(document.getElementById('input-date').value);
+        const next = days === 0 ? dayjs() : current.add(days, 'day');
+        const nextStr = next.format('YYYY-MM-DD');
+        document.getElementById('input-date').value = nextStr;
+        renderResult(nextStr);
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
